@@ -23,6 +23,20 @@ re-scrubs every prose field before zipping. Pinned schema (`schema_version: "1"`
   "mutations": [ { "file": "...", "kind": "bug|removal", "note": "..." } ],   // [] for extend
   "expected_initial_state": { "tests": "red|green", "matches_expected": true },
 
+  // HIRING CONTEXT (collected at intake — what we need on our end to evaluate)
+  "hiring": {
+    "position": "Senior Backend Engineer",
+    "seniority": "senior",
+    "job_description": "pasted JD or summary (optional)",
+    "time_target_hours": 1.5
+  },
+  // THE AI'S READ OF THE TASK (proposed at intake, user-confirmed)
+  "assessment": {
+    "problem_summary": "what the source PR/issue was about, plain language",
+    "test_focus": "what we're testing and how",
+    "skills_assessed": ["debugging", "date/time correctness", "reading unfamiliar code"]
+  },
+
   // SOURCE CONTEXT (the real PR/issue — evaluation grounding, never candidate-facing)
   "source": {
     "repo": "owner/name",

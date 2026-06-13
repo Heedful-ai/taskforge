@@ -32,6 +32,11 @@ def _taskify(**kw):
 def _meta(**kw):
     base = {"task_id": "t1", "language": "python", "build_command": None,
             "test_command": "python3 -m unittest", "created_by": {"operator": "Oskar", "email": None, "gh_login": "oz"},
+            "hiring": {"position": "Senior Backend Engineer", "seniority": "senior",
+                       "job_description": "Build resilient services.", "time_target_hours": 1.5},
+            "assessment": {"problem_summary": "off-by-one in a date window",
+                           "test_focus": "reintroduce the boundary bug; test inclusive end",
+                           "skills_assessed": ["debugging", "date/time correctness"]},
             "skill_version": "0.1.0", "spec_version": "agentskills.io", "created_at": "2026-06-13T00:00:00Z",
             "notes_for_evaluator": ""}
     base.update(kw)
@@ -50,6 +55,10 @@ class Assemble(unittest.TestCase):
         self.assertEqual(sc["created_by"]["operator"], "Oskar")
         self.assertEqual(sc["expected_initial_state"]["tests"], "red")
         self.assertIn("a + b", sc["reference_solution"]["diff"])
+        self.assertEqual(sc["hiring"]["position"], "Senior Backend Engineer")
+        self.assertEqual(sc["hiring"]["time_target_hours"], 1.5)
+        self.assertIn("debugging", sc["assessment"]["skills_assessed"])
+        self.assertTrue(sc["assessment"]["problem_summary"])
 
 
 class Package(unittest.TestCase):

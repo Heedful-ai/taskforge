@@ -48,6 +48,19 @@ def assemble_scorecard(taskify: dict, source: dict, validate_report: dict | None
         "what_to_test": taskify.get("what_to_test", []),
         "mutations": taskify.get("mutations", []),
         "expected_initial_state": (validate_report or {}).get("expected_initial_state", {}),
+        # hiring context — what we collect on our end to evaluate the candidate later
+        "hiring": {
+            "position": (meta.get("hiring") or {}).get("position", ""),
+            "seniority": (meta.get("hiring") or {}).get("seniority", ""),
+            "job_description": (meta.get("hiring") or {}).get("job_description", ""),
+            "time_target_hours": (meta.get("hiring") or {}).get("time_target_hours"),
+        },
+        # the AI's read of the task (proposed, user-confirmed)
+        "assessment": {
+            "problem_summary": (meta.get("assessment") or {}).get("problem_summary", ""),
+            "test_focus": (meta.get("assessment") or {}).get("test_focus", ""),
+            "skills_assessed": (meta.get("assessment") or {}).get("skills_assessed", []),
+        },
         "source": source or {},
         "created_by": meta.get("created_by", {}),
         "skill_version": meta.get("skill_version", ""),
@@ -64,6 +77,11 @@ def _prose_blobs(sc: dict) -> list[tuple[str, str]]:
     out.append(("reference_solution.diff", rs.get("diff") or ""))
     out.append(("reference_solution.summary", rs.get("summary") or ""))
     out.append(("notes_for_evaluator", sc.get("notes_for_evaluator") or ""))
+    hir = sc.get("hiring") or {}
+    out.append(("hiring.job_description", hir.get("job_description") or ""))
+    asmt = sc.get("assessment") or {}
+    out.append(("assessment.problem_summary", asmt.get("problem_summary") or ""))
+    out.append(("assessment.test_focus", asmt.get("test_focus") or ""))
     for i, m in enumerate(sc.get("mutations") or []):
         out.append((f"mutations[{i}].note", m.get("note") or ""))
     for i, w in enumerate(sc.get("what_to_test") or []):
@@ -101,6 +119,14 @@ def redact_scorecard_pii(sc: dict) -> int:
     if "diff" in rs:
         rs["diff"] = red(rs.get("diff")) if rs.get("diff") else rs.get("diff")
     sc["notes_for_evaluator"] = red(sc.get("notes_for_evaluator"))
+    hir = sc.get("hiring") or {}
+    if "job_description" in hir:
+        hir["job_description"] = red(hir.get("job_description"))
+    asmt = sc.get("assessment") or {}
+    if "problem_summary" in asmt:
+        asmt["problem_summary"] = red(asmt.get("problem_summary"))
+    if "test_focus" in asmt:
+        asmt["test_focus"] = red(asmt.get("test_focus"))
     for m in sc.get("mutations") or []:
         m["note"] = red(m.get("note"))
     sc["what_to_test"] = [red(w) for w in sc.get("what_to_test") or []]
