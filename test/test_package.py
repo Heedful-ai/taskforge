@@ -84,6 +84,22 @@ class Package(unittest.TestCase):
             self.assertFalse(res["ok"])
             self.assertFalse(os.path.exists(out))  # fail-closed: no zip written
 
+    def test_email_in_source_prose_is_redacted_not_blocked(self):
+        with tempfile.TemporaryDirectory() as d:
+            task = _task(d)
+            src = json.loads(json.dumps(SOURCE))
+            src["pr"]["description"] = "Co-Authored-By: Someone <real.person@company.com>"
+            sc = package.assemble_scorecard(_taskify(), src, None, _meta())
+            man = package.build_manifest(sc, task)
+            out = os.path.join(d, "bundle.zip")
+            res = package.write_bundle(task, sc, man, out)
+            self.assertTrue(res["ok"], res)              # not blocked
+            self.assertGreaterEqual(res["pii_redactions"], 1)
+            with zipfile.ZipFile(out) as z:
+                card = json.loads(z.read("scorecard.json"))
+            self.assertNotIn("real.person@company.com", card["source"]["pr"]["description"])
+            self.assertIn("redacted", card["source"]["pr"]["description"])
+
     def test_extend_mode_null_diff_packages(self):
         with tempfile.TemporaryDirectory() as d:
             task = _task(d)

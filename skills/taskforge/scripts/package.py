@@ -83,6 +83,37 @@ def scrub_scorecard(sc: dict) -> list:
     return findings
 
 
+def redact_scorecard_pii(sc: dict) -> int:
+    """Redact emails (PII) in the trusted source/prose fields in place — committer emails in captured
+    git provenance are normal metadata, not a leak, and the scorecard is never candidate-facing.
+    Secrets are NOT touched here (they hard-fail upstream). Returns the number of redactions."""
+    total = 0
+
+    def red(s):
+        nonlocal total
+        out, n = scrub.redact_pii(s or "")
+        total += n
+        return out
+
+    rs = sc.get("reference_solution") or {}
+    if "summary" in rs:
+        rs["summary"] = red(rs.get("summary"))
+    if "diff" in rs:
+        rs["diff"] = red(rs.get("diff")) if rs.get("diff") else rs.get("diff")
+    sc["notes_for_evaluator"] = red(sc.get("notes_for_evaluator"))
+    for m in sc.get("mutations") or []:
+        m["note"] = red(m.get("note"))
+    sc["what_to_test"] = [red(w) for w in sc.get("what_to_test") or []]
+    src = sc.get("source") or {}
+    pr, iss = src.get("pr") or {}, src.get("issue") or {}
+    if pr:
+        pr["diff"] = red(pr.get("diff")) if pr.get("diff") else pr.get("diff")
+        pr["description"] = red(pr.get("description"))
+    if iss:
+        iss["body"] = red(iss.get("body"))
+    return total
+
+
 def _checksums(task_dir: str) -> dict:
     sums = {}
     for dirpath, _, filenames in os.walk(task_dir):
@@ -118,9 +149,12 @@ def build_manifest(sc: dict, task_dir: str) -> dict:
 
 def write_bundle(task_dir: str, scorecard: dict, manifest: dict, out_zip: str) -> dict:
     findings = scrub_scorecard(scorecard)
-    if findings:
-        return {"ok": False, "reason": "scorecard prose tripped the scrub",
-                "findings": [f"{f.rule}@{f.where}:{f.line}" for f in findings]}
+    secrets = [f for f in findings if f.kind == "secret"]
+    if secrets:  # a real secret in our own record → fail closed, no zip
+        return {"ok": False, "reason": "scorecard prose contains a secret",
+                "findings": [f"{f.rule}@{f.where}:{f.line}" for f in secrets]}
+    # PII (emails) in trusted git-provenance prose → redact in place, then continue
+    pii_redactions = redact_scorecard_pii(scorecard)
 
     with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as z:
         for dirpath, _, filenames in os.walk(task_dir):
@@ -135,7 +169,7 @@ def write_bundle(task_dir: str, scorecard: dict, manifest: dict, out_zip: str) -
     with zipfile.ZipFile(out_zip) as z:
         names = z.namelist()
     assert "scorecard.json" in names and not any(n.startswith("task/scorecard.json") for n in names)
-    return {"ok": True, "out": out_zip, "entries": len(names),
+    return {"ok": True, "out": out_zip, "entries": len(names), "pii_redactions": pii_redactions,
             "task_mode": scorecard["task_mode"], "files": manifest["file_count"]}
 
 

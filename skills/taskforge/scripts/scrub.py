@@ -88,6 +88,26 @@ def scan_text(label: str, content: str) -> list[Finding]:
     return out
 
 
+_EMAIL_RULE = next(rx for kind, rule, rx in RULES if rule == "email")
+
+
+def redact_pii(text: str) -> tuple[str, int]:
+    """Rewrite PII (emails) to a redacted token, leaving placeholder domains intact. For TRUSTED,
+    non-candidate-facing fields (the scorecard's git-provenance prose) where a committer email is
+    normal metadata, not a leak — redaction beats a false-positive hard-fail. Secrets are NOT handled
+    here; those still hard-fail wherever they appear."""
+    count = 0
+
+    def repl(m: "re.Match[str]") -> str:
+        nonlocal count
+        if PLACEHOLDER_EMAIL_DOMAINS.search(m.group(0)):
+            return m.group(0)
+        count += 1
+        return "‹email:redacted›"
+
+    return _EMAIL_RULE.sub(repl, text), count
+
+
 def list_files(root: str) -> list[str]:
     """Repo-relative scannable text files (skips dep/build dirs and binaries)."""
     files: list[str] = []
