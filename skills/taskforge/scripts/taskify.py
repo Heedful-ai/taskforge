@@ -88,7 +88,8 @@ def taskify(correct_dir: str, plan: dict, out_dir: str) -> dict:
             target = os.path.join(out_dir, rel or "")
             if not rel or not os.path.isfile(target) or find is None:
                 return {"ok": False, "error": f"mutation target invalid: {mut}"}
-            content = open(target, encoding="utf-8").read()
+            with open(target, encoding="utf-8") as fh:
+                content = fh.read()
             if find not in content:
                 return {"ok": False, "error": f"mutation 'find' not present in {rel}: {find!r}"}
             with open(target, "w", encoding="utf-8") as fh:
