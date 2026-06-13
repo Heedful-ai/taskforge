@@ -61,10 +61,13 @@ Don't interrogate them about language/topic/stack either; you'll infer that your
 1. With **read-only** `gh` calls, fetch the PR and its linked issue: `gh pr view <n> --json
    number,title,body,url`, `gh pr diff <n>`, and the issue if referenced. Keep these for the scorecard
    `source` block.
-2. **You summarize, the user reacts.** Tell the user, in 3–5 lines: what the PR/issue was about, what
-   language/stack it is, and **what you'd test and how** (the bug to reintroduce, or the extension to
-   ask for) and the skills it assesses. Ask clarifying questions only if something is genuinely
-   unclear. **STOP — the user confirms or corrects.**
+2. **Propose task OPTIONS — a menu, not one answer.** Say what the PR was about + the stack, then for a
+   non-trivial PR present **2–4 distinct task options** drawn from genuinely different interesting
+   parts of the PR (not variations of one theme), each with: which part it's built on, what you'd test
+   (break vs extend), skills, rough difficulty. **STOP — let the user pick one (or combine).** Choose
+   options by **substance, not by ease of testing**: the offline gate is about the *network*
+   (`--network=none`), NOT about avoiding mocks — mocking a DB/API client runs offline fine, so don't
+   flee meaty logic for a shallow pure-function slice. See `references/intake.md`.
 3. **Collect the hiring metadata we need on our end** (for the scorecard, never candidate-facing):
    the **position** they're hiring for, **seniority**, a **job description** (ask them to paste it or
    point at a file/URL — optional), and the **time target** (~1–2h). Plus the operator's name.

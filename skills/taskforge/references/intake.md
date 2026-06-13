@@ -21,17 +21,30 @@ task, or ask anything about the role until they've picked one of your proposals.
 
 Keep all of this for the scorecard `source` block.
 
-## 3. Propose — you summarize, the user reacts
-Tell the user, in ~3–5 lines:
-- **What it was about** — the problem the PR/issue solved, in plain language.
-- **Stack** — the language/framework (you inferred it; don't ask).
-- **What you'd test and how** — the specific bug you'd reintroduce (`break_code`) or the feature
-  you'd ask them to build (`extend_functionality`), and roughly how long it should take.
-- **Skills assessed** — e.g. debugging, reading unfamiliar code, date/time correctness, API design.
+## 3. Propose task OPTIONS — a menu, not one answer
+First, one line: **what the PR was about** + the **stack** (you inferred it; don't ask).
 
-Ask a clarifying question only if something is genuinely ambiguous. Then **STOP — the user confirms or
-corrects.** This becomes `assessment.problem_summary`, `assessment.test_focus`,
-`assessment.skills_assessed`.
+Then, for anything but a trivial PR: a single PR usually contains several distinct, interesting pieces
+of engineering. **Identify the 2–4 most substantial ones and present them as separate task options for
+the user to choose from.** Do NOT converge on one, and do NOT quietly pick the easiest piece. Cover
+genuinely different parts of the PR (different modules/behaviours/angles), not variations of one theme.
+
+For each option, ~2 lines:
+- **Which part of the PR** it's built on — name the module / function / behaviour.
+- **What you'd test and how** — the bug to reintroduce (`break_code`) or the capability to ask for
+  (`extend_functionality`), plus the **skills assessed** and a rough difficulty/time.
+
+Then **STOP — let the user pick one (or combine).** Their choice becomes
+`assessment.problem_summary`, `assessment.test_focus`, `assessment.skills_assessed`. Ask a clarifying
+question only if something is genuinely ambiguous.
+
+### Pick by substance, NOT by ease of testing
+Choose the options that best represent the PR's **real engineering** — the interesting logic — not
+whichever function is easiest to test. The offline constraint is about the **network**
+(`--network=none`), **NOT** about avoiding mocks: mocking a database or API client (a Supabase/HTTP/SDK
+client, etc.) is standard and runs offline perfectly. **Never downgrade to a shallow slice** (e.g.
+"assert the prompt string contains X") just because it has no I/O — that tests almost nothing of the
+PR. If the meaty logic needs a mocked client, that's fine — carve it *with* the mock and propose it.
 
 ## 4. Collect the hiring metadata (for our records — never candidate-facing)
 Once they've confirmed the task, gather:
