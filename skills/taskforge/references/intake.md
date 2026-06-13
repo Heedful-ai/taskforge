@@ -3,12 +3,16 @@
 The user gives you **one input: a PR.** You do the rest. Don't make them describe the language, the
 topic, or what to test — read the PR and figure it out.
 
-## 1. Get the PR
-Ask for a GitHub PR link or number. If they don't have one:
-- offer to find candidates: `gh pr list --state merged --limit 20`, and/or `gh search prs --merged`;
-- suggest 2–3 that look like **self-contained, testable** changes (a bounded bug fix or a small
-  feature on a module with tests) — those carve cleanly. Avoid giant PRs, pure config, and
-  auth/crypto/payment topics (the scrub will refuse those anyway).
+## 1. Get the PR — propose, then wait
+Ask for a GitHub PR link or number. If they don't have one (or ask you to suggest):
+- find candidates: `gh pr list --state merged --limit 20`, and/or `gh search prs --merged`;
+- **present 2–4 specific PRs as a short proposal list**, each with a one-line reason it'd make a good,
+  self-contained task (a bounded bug fix or small feature on a module with tests — those carve
+  cleanly). Avoid giant PRs, pure config, and auth/crypto/payment topics (the scrub refuses those).
+
+**Then STOP and let the user choose.** This is a hard gate: do not fetch the diff, summarize, design a
+task, or ask anything about the role until they've picked one of your proposals. Make proposals first
+— nothing else.
 
 ## 2. Read it (read-only `gh`)
 - `gh pr view <n> --json number,title,body,url,files`

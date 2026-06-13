@@ -46,10 +46,16 @@ Run `scripts/preflight.py`. If it exits non-zero, **STOP** and tell the user exa
 Note the container runtime it found (you'll pass it to validation).
 
 ## Phase 1 — Get a PR
-Ask the user for **one thing: a GitHub PR (a link or number).** If they don't have one in mind, offer
-to find candidates: `gh pr list --state merged` (and `gh search prs`), and suggest a few that look
-like self-contained, testable changes. **Do not interrogate them about language, topic, or stack —
-you'll infer all of that yourself from the PR.** Follow `references/intake.md`.
+The user gives **one thing: a GitHub PR.**
+- If they name a PR (link or number), use it.
+- If they ask you to suggest one (or have none in mind): list candidates with `gh pr list --state
+  merged` / `gh search prs`, then **present 2–4 specific PRs as proposals**, each with a one-line
+  reason it'd make a good self-contained task. **STOP and let the user pick one.**
+
+**Hard rule: propose, then wait.** Until the user has chosen a PR, do NOT fetch its diff, summarize it,
+design a task, or ask about the role/position. One step at a time — proposals first, nothing else.
+Don't interrogate them about language/topic/stack either; you'll infer that yourself. Follow
+`references/intake.md`.
 
 ## Phase 2 — Propose & confirm (+ collect hiring metadata)
 1. With **read-only** `gh` calls, fetch the PR and its linked issue: `gh pr view <n> --json
