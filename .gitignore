@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Skill working/output artifacts (generated during a run)
+/work/
+*.task-bundle.zip
+carve_plan.json
+task_plan.json
+source_context.json
+/correct/
+/task/
+
+# OS
+.DS_Store
