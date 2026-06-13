@@ -74,6 +74,12 @@ def validate(mode: str, test_cmd: str, build_cmd: str | None, correct_dir: str, 
     if not correct_run["passed"]:
         reasons.append("correct/ does not build+test green offline (needs network, or the slice isn't standalone)")
 
+    # Phase 3 standalone check: no task yet — only prove the carved project builds+tests offline.
+    if not task_dir:
+        return {"ok": not reasons, "fail_closed": False, "reasons": reasons,
+                "standalone": True, "correct_passed": correct_run["passed"],
+                "runtime": runtime, "image": image}
+
     task_run = run_offline(runtime, image, task_dir, test_cmd, build_cmd)
     if mode == "break_code":
         expected = "red"
@@ -117,7 +123,7 @@ def main() -> int:
         return 4
     build_cmd = _arg("--build")
     correct_dir = _arg("--correct", "correct")
-    task_dir = _arg("--task", "task")
+    task_dir = _arg("--task", None)  # omit for the Phase 3 standalone check (correct-only)
     language = _arg("--language", "python")
     image = _arg("--image", DEFAULT_IMAGES.get(language, "python:3.11-slim"))
     runtime = _arg("--runtime", detect_runtime())
