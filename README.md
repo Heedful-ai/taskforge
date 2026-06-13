@@ -48,6 +48,19 @@ task-bundle.zip
 └── manifest.json         # language, build/test commands, sizes, checksums, versions
 ```
 
+The evaluating side reads `scorecard.json` + `manifest.json` and mounts only `task/`. See
+[docs/jelly-handoff.md](docs/jelly-handoff.md) for the receiving-side contract and required
+pre-mount checks.
+
+## Development
+
+Scripts are Python 3 (standard library only). Run the test suite — including a real
+`--network=none` container check when Docker is available — with:
+
+```bash
+python3 -m unittest discover -s test
+```
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
