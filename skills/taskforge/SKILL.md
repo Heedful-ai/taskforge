@@ -2,39 +2,42 @@
 name: taskforge
 description: >-
   Build a bounded, self-contained candidate coding task (and a trusted evaluation scorecard) from
-  one of the user's real GitHub issues or pull requests. Use this whenever the user wants to create,
-  prepare, or generate an interview / take-home / candidate coding task, hiring task, or evaluation
-  task from their repo, an issue, or a PR. Collaborative and fail-closed: it interviews the user,
-  carves a standalone runnable project, turns it into a task (break working code or ask to extend
-  functionality), verifies it runs offline, and packages a task-bundle.zip.
+  one of the user's real GitHub pull requests. Use this whenever the user wants to create, prepare,
+  or generate an interview / take-home / candidate coding task, hiring task, or evaluation task from
+  their repo or a PR. Collaborative and fail-closed: it scores the PR's suitability, carves a
+  standalone runnable project, and turns it into a PROBLEM the candidate must design and solve
+  (problem-first, not a spec to transcribe) — with hidden behaviour grading, an offline solvability
+  proof, and a packaged task-bundle.zip.
 license: MIT
 compatibility: Requires git, gh (authenticated), python3 (>=3.9), zip, and a container runtime (docker or podman).
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
   spec: agentskills.io
   homepage: https://github.com/taskforge/taskforge
 ---
 
-# taskforge — build a candidate coding task from a real issue/PR
+# taskforge — build a candidate coding task from a real PR
 
-Turn one real GitHub issue/PR into a bounded (~1–2h) **candidate coding task** plus a **trusted
-scorecard**, packaged as `task-bundle.zip`. Run this collaboratively with the user. **Deterministic
-bundled scripts do the fragile and safety-critical work — run them; do not reimplement their logic.**
+Turn one real GitHub PR into a bounded (~1–2h) **candidate coding task** plus a **trusted scorecard**,
+packaged as `task-bundle.zip`. The task **presents a problem and asks the candidate to design and solve
+it** — it does NOT hand them the solution. Run this collaboratively. **Deterministic bundled scripts do
+the fragile and safety-critical work — run them; do not reimplement their logic.** You (the agent)
+design the *task* — grounded in `references/task-design.md`, not a fixed formula.
 
 Work in a scratch dir (e.g. `./work`). Paths below are relative to the skill root for scripts/refs,
-and to the scratch dir for artifacts (`correct/`, `task/`, `*.json`, the zip).
+and to the scratch dir for artifacts (`correct/`, `task/`, `hidden/`, `*.json`, the zip).
 
 **Copy this checklist into your reply and tick each phase. Never pass a STOP gate without the user.**
 
 - [ ] Phase 0 — Preflight
-- [ ] Phase 1 — Get a PR (a link, or offer to search)
-- [ ] Phase 2 — Propose & confirm (AI summarizes + proposes the test; user confirms; collect hiring metadata)
+- [ ] Phase 1 — Get a PR + score suitability (STOP: user picks)
+- [ ] Phase 2 — Propose problem-first task options & confirm (+ collect hiring metadata)
 - [ ] Phase 3 — Carve (STOP: approve the slice)
 - [ ] Phase 4 — Validate standalone
 - [ ] Phase 4b — Scrub (fail-closed)
-- [ ] Phase 5 — Taskify (STOP: approve difficulty)
-- [ ] Phase 6 — Re-validate
-- [ ] Phase 7 — Brief (STOP: approve)
+- [ ] Phase 5 — Taskify (design the spec; STOP: approve difficulty)
+- [ ] Phase 6 — Re-validate (hidden-suite solvability)
+- [ ] Phase 7 — Brief (STOP: approve — no spoilers)
 - [ ] Phase 8 — Package & hand off
 
 If you loop on any phase 3 times with no progress, STOP and propose stopping or narrowing scope.
@@ -45,104 +48,113 @@ If you loop on any phase 3 times with no progress, STOP and propose stopping or 
 Run `scripts/preflight.py`. If it exits non-zero, **STOP** and tell the user exactly what to install.
 Note the container runtime it found (you'll pass it to validation).
 
-## Phase 1 — Get a PR
+## Phase 1 — Get a PR + score its suitability
 The user gives **one thing: a GitHub PR.**
-- If they name a PR (link or number), use it.
-- If they ask you to suggest one (or have none in mind): list candidates with `gh pr list --state
-  merged` / `gh search prs`, then **present 2–4 specific PRs as proposals**, each with a one-line
-  reason it'd make a good self-contained task. **STOP and let the user pick one.**
+- If they name a PR (link or number), use it. If they ask you to suggest one: list candidates with
+  `gh pr list --state merged` / `gh search prs`.
+- **Score suitability before proposing.** For each candidate, `gh pr view <n> --json
+  files,additions,deletions > /tmp/pr.json` and run `python3 scripts/score_pr.py /tmp/pr.json --json`.
+  **Drop any `hard_refuse` PR** (refused domain, no carvable source, pure config/rename) with a
+  plain-language reason. Apply the rubric in `references/pr-suitability.md` to the survivors.
+- **Present 2–4 suitable PRs as proposals**, each with a one-line reason it makes a good task (grounded
+  in the suitability signals/rubric, not a hunch). **STOP and let the user pick one.**
 
-**Hard rule: propose, then wait.** Until the user has chosen a PR, do NOT fetch its diff, summarize it,
-design a task, or ask about the role/position. One step at a time — proposals first, nothing else.
-Don't interrogate them about language/topic/stack either; you'll infer that yourself. Follow
-`references/intake.md`.
+**Hard rule: propose, then wait.** Until the user picks a PR, do NOT design a task or ask about the
+role. Don't interrogate them about language/stack — infer it. See `references/intake.md`.
 
-## Phase 2 — Propose & confirm (+ collect hiring metadata)
-1. With **read-only** `gh` calls, fetch the PR and its linked issue: `gh pr view <n> --json
-   number,title,body,url`, `gh pr diff <n>`, and the issue if referenced. Keep these for the scorecard
-   `source` block.
-2. **Propose task OPTIONS in plain language — a menu, not one answer.** Say what the PR was about + the
-   stack, then for a non-trivial PR present **2–4 distinct task options** from genuinely different
-   interesting parts of the PR (not variations of one theme). **Each option is, by default, a combined
-   task: fix one or two planted bugs AND build a small extension** — pure bug-fixing is too shallow.
-   Describe each in plain terms (e.g. *"fix two bugs in the versioning logic, then add a `restoreEntry`
-   function"*) — **never the internal labels.** Give skills + rough difficulty. **STOP — let the user
-   pick one (or combine, or dial to just-fix / just-build).** Choose by **substance, not ease of
-   testing**: the offline gate is about the *network* (`--network=none`), NOT avoiding mocks — mock a
-   DB/API client and carve the meaty logic; don't flee to a shallow pure-function slice. See
-   `references/intake.md`.
-3. **Collect the hiring metadata we need on our end** (for the scorecard, never candidate-facing):
-   the **position** they're hiring for, **seniority**, a **job description** (ask them to paste it or
-   point at a file/URL — optional), and the **time target** (~1–2h). Plus the operator's name.
-Carry all of this into `meta.json` at Phase 8 (`hiring` + `assessment` + `created_by`).
+## Phase 2 — Propose problem-first task options & confirm (+ hiring metadata)
+1. With **read-only** `gh` calls, fetch the PR and its linked issue (`gh pr view <n> --json
+   number,title,body,url`, `gh pr diff <n>`, the issue if referenced). Keep these for the scorecard
+   `source` block. Note: the PR diff is an **authoring aid** — never shown to the candidate.
+2. **Propose task OPTIONS in plain language — a menu, not one answer.** Ground them in
+   `references/task-design.md`. Each option presents a **problem the PR solved** (the pre-solution
+   world + what's needed), at the altitude the role needs, and is **time-filling**: typically a build-it
+   core + a planted bug or two + an extend/scale part — *the candidate isn't expected to finish all of
+   it*. **Never name the solution** (don't say "implement an append-only log"; say "make brief history
+   auditable and recoverable"). Cover genuinely different parts of the PR. Give skills + rough
+   difficulty. **STOP — let the user pick / combine / adjust.** Choose by **substance, not ease of
+   testing** (offline = `--network=none`, NOT no-mocks — mock a DB/API client and carve the meaty logic).
+3. **Collect hiring metadata** (for the scorecard, never candidate-facing): **position**, **seniority**
+   (drives task altitude), **job description** (paste/URL, optional), **time target** (~1–2h), operator
+   name. Also record your **suitability verdict + reasons** for `pr_suitability`.
+Carry all of this into `meta.json` at Phase 8.
 
 ## Phase 3 — Carve
-Follow `references/carve-guide.md`.
-1. Choose a coherent, bounded slice (usually the files the PR touched + what's needed to run them) and
-   write `carve_plan.json` (files, language, build/test commands, vendor strategy, and the captured
-   `source`).
-2. Run `python3 scripts/validate_carve.py <repo> carve_plan.json`. Fix any rejection (too big, missing
-   files, spans too much).
+Follow `references/carve-guide.md`. Carve the **solution world** (`correct/`) — the PR's merged state,
+the "answer" the hidden suite will verify.
+1. Write `carve_plan.json` (files, language, build/test commands, vendor strategy, captured `source`).
+2. Run `python3 scripts/validate_carve.py <repo> carve_plan.json`. Fix any rejection.
 3. **STOP — slice approval. Show the TASK, not just files.** Present (a) a short **draft of the
-   candidate README** (`references/readme-template.md`) — what they'll be asked to do + how they run
-   it, so the user judges the actual task; (b) the carved file list; (c) what you checked for safety.
-   Ask the user to confirm **two** things: *is this the right task?* and *is the slice OK to share
-   (nothing proprietary/sensitive)?* Don't proceed on a file list alone.
-4. Run `python3 scripts/carve.py <repo> carve_plan.json --out correct`. It copies the slice (no
-   `.git`), runs the vendor commands so deps resolve offline, and writes `source_context.json`.
-   **Note (native-dep languages like Node):** vendor in the *target container*, not on the host — a
-   macOS `node_modules` won't run in the Linux validation container. Set `vendor_commands` to run
-   inside the image, or vendor via the container.
+   candidate BRIEF** (`references/readme-template.md`) — the problem + what they design, so the user
+   judges the real task; (b) the carved file list; (c) what you checked for safety. Confirm **two**
+   things: *is this the right task?* and *is the slice OK to share?* Don't proceed on a file list alone.
+4. Run `python3 scripts/carve.py <repo> carve_plan.json --out correct`. Copies the slice (no `.git`),
+   vendors deps for offline, writes `source_context.json`. **Native-dep languages (Node):** vendor in
+   the *target container*, not the host.
 
 ## Phase 4 — Validate standalone
-Run `python3 scripts/validate.py --mode break_code --test "<test_command>" [--build "<build>"]
---language <lang> --correct correct` (omit `--task` for the standalone check). It runs the tests in a
-`--network=none` container. If it isn't green, the slice isn't self-contained or needs network — loop
-with the user (add a missing file, fix the vendor step). Exit 5 means no container runtime → STOP.
+Run `python3 scripts/validate.py --test "<test_command>" [--build "<build>"] --language <lang>
+--correct correct` (omit `--task` for the standalone check). Runs in a `--network=none` container. If
+not green, the slice isn't self-contained — loop with the user. Exit 5 = no runtime → STOP.
 
 ## Phase 4b — Scrub (fail-closed)
-Save the fetched issue text to a file, then run
-`python3 scripts/scrub.py correct --text issue=<issue.txt>`. **Any finding (exit 2 secret / exit 3
-refused domain) → STOP, produce nothing.** See `references/safety.md`.
+Save the fetched issue text to a file, then run `python3 scripts/scrub.py correct --text
+issue=<issue.txt>`. **Any finding (exit 2 secret / exit 3 refused domain) → STOP, produce nothing.**
+See `references/safety.md`.
 
-## Phase 5 — Taskify
-Follow `references/task-modes.md`. Build the task the user confirmed in Phase 2 — **by default both:
-1–2 planted bugs to fix AND an extension to build.** Write `task_plan.json` with `mutations` (the bugs)
-and `extension` (the build-something ask + its acceptance criteria), then run
-`python3 scripts/taskify.py correct task_plan.json --out task`. It applies the bugs, generates the
-fix's reference diff, records the extension, and writes `taskify_result.json`. **STOP — confirm
-difficulty in plain terms** (e.g. "~Xh: fix the Y bug(s) + build Z") and get the user's agreement.
+## Phase 5 — Taskify — design the spec
+Design the task per `references/task-design.md`, then express it as `task_plan.json` and run
+`python3 scripts/taskify.py correct task_plan.json --out task`. The spec is **free-form** (no mode
+enum); compose what the task needs:
+- `mutations` — `kind:"stub"` gutters the solution to a **signature-preserving, still-compiling** TODO
+  (the build-it part; gut schema/fixtures too if referenced); `kind:"bug"` plants a defect to fix.
+- `strip_paths` — remove the team's own tests (they'd spoil and break the build proof).
+- `example_tests` — `[{path,content}]` shipped in `task/`, **mechanics-only** (harness/IO shape, never
+  the invariants).
+- `hidden_tests` — `{core:[…], stretch:[…]}` authored **from the BRIEF's worked scenarios** (the
+  invariant, not the team's implementation); withheld to a sibling `hidden/`.
+- optional `extension`/`scale` (human-graded), `seeded_failure`, `human_rubric`, `notes_evaluation`, and
+  a descriptive `task_mode` string carrying the calibration anchors.
 
-## Phase 6 — Re-validate
-Run `python3 scripts/validate.py --mode <mode> --test "<test_command>" [--build ...] --language <lang>
---correct correct --task task --json > validate_report.json`. It confirms `correct/` is green and
-`task/` is in its expected state (`break_code` → red, `extend` → green) offline. If it rejects, return
-to Phase 5.
+taskify writes `task/` (problem world + example tests), the sibling `hidden/` suite, the
+`reference_exemplar`, and `taskify_result.json`. **STOP — confirm difficulty in plain terms** (e.g.
+"~Xh: design the history model, fix a bug, then handle concurrency") and get agreement.
+
+## Phase 6 — Re-validate (solvability, offline)
+Run `python3 scripts/validate.py --test "<test_command>" --hidden hidden --hidden-test
+"<hidden_test_command>" [--build ...] --language <lang> --correct correct --task task --json >
+validate_report.json`. It proves offline: `correct/` green; `task/` builds + example tests green
+(RED-for-right-reason); hidden `core` GREEN on `correct/` and RED on `task/`. If it rejects (e.g. the
+stub broke the build, or the suite over-fits), return to Phase 5.
 
 ## Phase 7 — Brief
-Write `task/BRIEF.md` from `references/readme-template.md`: state the **problem**, not the solution; no
-spoilers from the reference diff. Include the run instructions and the no-internet note. **STOP — show
-the brief and get approval.**
+Write `task/BRIEF.md` from `references/readme-template.md`: state the **problem + constraints + worked
+scenarios**, never the solution; require `NOTES.md`. **STOP — show the brief and get approval.** The
+no-spoiler check covers: no solution/bug-location/hidden-checks; **example tests are mechanics-only**
+(don't reveal invariants); and confirm the **hidden suite asserts the invariant, not the team's
+specific implementation** (a different correct solution must pass it).
 
 ## Phase 8 — Package & hand off
-Assemble `meta.json` from what you gathered:
-- `task_id`, `language`, `build_command`, `test_command`;
-- `hiring`: `{ position, seniority, job_description, time_target_hours }` (Phase 2);
-- `assessment`: `{ problem_summary, test_focus, skills_assessed }` (your Phase 2 summary, as confirmed);
-- `created_by`: `{ operator, email, gh_login }`; `skill_version` (frontmatter), `spec_version`,
-  `created_at` (real clock); optional `reference_summary`, `notes_for_evaluator`.
-Then run:
-`python3 scripts/package.py --task task --taskify taskify_result.json --source source_context.json
---validate validate_report.json --meta meta.json --out task-bundle.zip`.
-It re-scrubs the scorecard prose (fail-closed) and asserts the layout. Show the summary and hand the
-user `task-bundle.zip` — tell them `scorecard.json` is trusted and must not be given to the candidate.
+Assemble `meta.json`:
+- `task_id`, `language`, `build_command`, `test_command`, **`hidden_test_command`**;
+- `hiring`: `{ position, seniority, job_description, time_target_hours }`;
+- `assessment`: `{ problem_summary, test_focus, skills_assessed }`;
+- **`pr_suitability`**: `{ verdict, reasons }`; optional `grading.partial_credit`;
+- `created_by`, `skill_version`, `spec_version`, `created_at` (real clock), optional `reference_summary`,
+  `notes_for_evaluator`.
+Then run `python3 scripts/package.py --task task --taskify taskify_result.json --source
+source_context.json --validate validate_report.json --meta meta.json --out task-bundle.zip`. It embeds
+the hidden suite + rubric into `scorecard.json` (trusted sibling), re-scrubs all prose (fail-closed),
+and asserts the layout (hidden suite never under `task/`). Hand the user `task-bundle.zip` — tell them
+`scorecard.json` (the hidden suite + answer key) is trusted and must **never** be given to the candidate.
 
 ---
 
 ## References
-- `references/intake.md` — get a PR, propose the task, collect hiring metadata
+- `references/intake.md` — get a PR, score suitability, propose problem-first options, collect metadata
+- `references/pr-suitability.md` — the suitability rubric (+ how `score_pr.py` feeds it)
+- `references/task-design.md` — **how to design a problem-first, time-filling, seniority-appropriate task**
 - `references/carve-guide.md` — carving a bounded standalone slice + per-language defaults
-- `references/task-modes.md` — the break_code / extend_functionality playbooks
-- `references/readme-template.md` — the candidate `BRIEF.md` template
-- `references/scorecard-schema.md` — the trusted `scorecard.json` contract
+- `references/readme-template.md` — the candidate `BRIEF.md` template (+ required NOTES.md)
+- `references/scorecard-schema.md` — the trusted `scorecard.json` contract (schema v2)
 - `references/safety.md` — the gates and the fail-closed rule
