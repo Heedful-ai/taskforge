@@ -63,8 +63,10 @@ Don't interrogate them about language/topic/stack either; you'll infer that your
    `source` block.
 2. **Propose task OPTIONS — a menu, not one answer.** Say what the PR was about + the stack, then for a
    non-trivial PR present **2–4 distinct task options** drawn from genuinely different interesting
-   parts of the PR (not variations of one theme), each with: which part it's built on, what you'd test
-   (break vs extend), skills, rough difficulty. **STOP — let the user pick one (or combine).** Choose
+   parts of the PR (not variations of one theme), each stating its **mode** (`break_code` vs
+   `extend_functionality`), which part it's built on, what you'd test, skills, rough difficulty.
+   **Offer both modes — never silently default to `break_code`;** include an `extend` option where the
+   PR supports it. **STOP — let the user pick the topic AND the mode (or combine).** Choose
    options by **substance, not by ease of testing**: the offline gate is about the *network*
    (`--network=none`), NOT about avoiding mocks — mocking a DB/API client runs offline fine, so don't
    flee meaty logic for a shallow pure-function slice. See `references/intake.md`.
@@ -80,9 +82,11 @@ Follow `references/carve-guide.md`.
    `source`).
 2. Run `python3 scripts/validate_carve.py <repo> carve_plan.json`. Fix any rejection (too big, missing
    files, spans too much).
-3. **STOP — show the user the file list and ask them to confirm the slice leaves nothing proprietary
-   or sensitive they wouldn't want a candidate to see.** (Secrets are script-gated; "is this OK to
-   share" is a human call.)
+3. **STOP — slice approval. Show the TASK, not just files.** Present (a) a short **draft of the
+   candidate README** (`references/readme-template.md`) — what they'll be asked to do + how they run
+   it, so the user judges the actual task; (b) the carved file list; (c) what you checked for safety.
+   Ask the user to confirm **two** things: *is this the right task?* and *is the slice OK to share
+   (nothing proprietary/sensitive)?* Don't proceed on a file list alone.
 4. Run `python3 scripts/carve.py <repo> carve_plan.json --out correct`. It copies the slice (no
    `.git`), runs the vendor commands so deps resolve offline, and writes `source_context.json`.
    **Note (native-dep languages like Node):** vendor in the *target container*, not on the host — a

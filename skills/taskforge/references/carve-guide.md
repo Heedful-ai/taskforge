@@ -51,8 +51,16 @@ The MVP ships and proves one language end-to-end; others are appended without ch
 
 ## 4. Gate, then carve
 - Run `scripts/validate_carve.py <repo> carve_plan.json`. Fix rejections (too big, missing files, …).
-- **STOP — ask the user to approve the slice.** Confirm explicitly: *does this leave the repo with
-  nothing proprietary or sensitive the company wouldn't want a candidate to see?* (Secrets are
-  script-gated; "is this OK to share" is a human call.)
+- **STOP — slice approval. Show the user the TASK, not just files.** A file list alone doesn't tell
+  them whether it's the right task. Present, at this gate:
+  1. **What the candidate will actually be asked to do** — a short draft of the candidate README
+     (`references/readme-template.md`): the context + the "Your task" framing + how they run it. This
+     is the candidate's experience; the user judges *the task* here, not a file list.
+  2. **What they'll receive** — the carved file list (candidate-visible files; note `node_modules`/
+     deps are vendored but omitted from the listing).
+  3. **Safety** — what you checked (no secrets/PII, no proprietary branding/data, monorepo coupling
+     stubbed out), and that the full PR diff lives only in the trusted scorecard, never candidate-facing.
+  Ask the user to confirm **two** things: *is this the right task?* and *is the slice OK to share
+  (nothing proprietary/sensitive)?* Don't proceed on file approval alone.
 - Run `scripts/carve.py <repo> carve_plan.json --out correct`. It copies the slice (no `.git`), runs
   the vendor commands so deps are present offline, and writes `source_context.json`.

@@ -31,10 +31,15 @@ genuinely different parts of the PR (different modules/behaviours/angles), not v
 
 For each option, ~2 lines:
 - **Which part of the PR** it's built on — name the module / function / behaviour.
-- **What you'd test and how** — the bug to reintroduce (`break_code`) or the capability to ask for
-  (`extend_functionality`), plus the **skills assessed** and a rough difficulty/time.
+- **Mode** — `break_code` (reintroduce a defect to fix) or `extend_functionality` (ask them to build
+  something) — and **what you'd test**, plus the **skills assessed** and a rough difficulty/time.
 
-Then **STOP — let the user pick one (or combine).** Their choice becomes
+**Offer both modes — never silently default to `break_code`.** For the same piece of logic you can
+often frame *either* a break-task *or* an extend-task; where the PR supports it, include at least one
+`extend_functionality` option in the menu so the user actually gets to choose the mode, not just the
+topic. The mode is the user's decision.
+
+Then **STOP — let the user pick one (or combine).** Their choice (topic **and** mode) becomes
 `assessment.problem_summary`, `assessment.test_focus`, `assessment.skills_assessed`. Ask a clarifying
 question only if something is genuinely ambiguous.
 
