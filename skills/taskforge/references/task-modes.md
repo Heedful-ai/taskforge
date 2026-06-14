@@ -1,51 +1,50 @@
-# Task modes — turning the working project into a task
+# Building the task — fix some bugs AND build an extension (default)
 
-Two simple modes. Pick one with the user. Both must land a ~1–2h task (estimate the solve-time and
-confirm it at the gate — caps bound size, not difficulty).
+**Default task = both:** plant **one or two bugs** for the candidate to find and fix, **and** ask them
+to **build a small extension** on the system. Fixing bugs alone is too shallow — it shows debugging but
+not whether they can actually build. The combination shows both. Only drop to one half if the user
+explicitly wants that.
 
-## `break_code` — they fix what you break
-Introduce 1–3 small, realistic defects into the working code; the candidate fixes them. The
-reference solution is generated automatically (the inverse of your mutation), so it always matches.
+**Talk to the user in plain language.** Never say "break_code" / "extend_functionality" /
+"fix_and_extend" — those are internal labels. Say things like: *"the candidate fixes two planted bugs
+in the versioning logic, then adds support for X"*.
 
-Emit `task_plan.json`:
+You emit a single `task_plan.json` carrying the bug(s) and the extension:
+
 ```jsonc
 {
-  "mode": "break_code",
-  "mutations": [
-    { "file": "src/parser.py", "find": "depth + 1", "replace": "depth", "note": "off-by-one in nesting" }
+  "mutations": [   // the bug(s) to fix — exact-substring edits to the working code
+    { "file": "src/versioning.ts", "find": "deleted_at: null", "replace": "deleted_at: undefined",
+      "note": "tombstone delete writes the wrong field, so deletes don't take" }
   ],
-  "acceptance_criteria": [
-    { "id": "AC1", "description": "all tests pass", "check": "test_command", "weight": 1 }
-  ],
-  "what_to_test": ["correctly fixes the nesting bug", "doesn't break unrelated cases"],
-  "vendored_paths": [".venv", "node_modules"]
+  "extension": {   // the build-something ask (no code change to correct/ — it's forward-looking)
+    "description": "Add a `restoreEntry(id)` that revives a tombstoned entry as a new active version.",
+    "acceptance_criteria": [
+      { "id": "AC_EXT1", "description": "restoreEntry creates a new active version of a deleted entry", "check": "manual", "weight": 1 },
+      { "id": "AC_EXT2", "description": "existing tests still pass", "check": "test_command", "weight": 1 }
+    ]
+  },
+  "what_to_test": ["the fix is minimal and correct", "the extension follows the append-only model", "no regressions"],
+  "vendored_paths": ["node_modules"]
 }
 ```
-- `find` must be an **exact substring** present in the file (the script fails if it isn't — no silent
-  no-op). Keep replacements minimal and plausible (a real bug, not a syntax error).
-- Good breakages make the existing tests **go red**; the candidate's job is to get them green.
-- After taskify, U6 confirms the tests are red and that applying the reference diff makes them green.
 
-## `extend_functionality` — they build something new
-The project stays working; the candidate is asked (in `BRIEF.md`) to add a capability. There is **no
-reference diff** — it's judged by acceptance criteria (and a `test_command` where you can express the
-new behaviour as a hidden/extra test the evaluator runs).
+Rules:
+- **Bugs (`mutations`):** 1–2 small, realistic defects in the *interesting* logic (not cosmetic). `find`
+  must be an **exact substring** in the file (the script fails if it isn't — no silent no-op). A good
+  bug makes the existing tests **go red**; the candidate's job is to get them green.
+- **Extension:** a bounded "now build X" that fits the same module and the ~1–2h budget. It needs **no
+  change to `correct/`** — it's what the candidate adds. Capture it as `extension.description` + its
+  own `acceptance_criteria` (use `check: "test_command"` when you can express it as a hidden test the
+  evaluator runs, else `manual`).
+- The skill derives the internal mode automatically (`fix_and_extend` when both are present). The
+  bug-fix reference diff is generated from the mutations; the extension is judged by its criteria.
 
-Emit `task_plan.json`:
-```jsonc
-{
-  "mode": "extend_functionality",
-  "mutations": [],
-  "acceptance_criteria": [
-    { "id": "AC1", "description": "adds --json flag that prints valid JSON", "check": "manual", "weight": 1 },
-    { "id": "AC2", "description": "existing tests still pass", "check": "test_command", "weight": 1 }
-  ],
-  "what_to_test": ["clean API for the new flag", "handles empty input", "keeps existing behaviour"],
-  "vendored_paths": [".venv", "node_modules"]
-}
-```
+## Variants (only if the user asks)
+- **Bugs only** — omit `extension`. (Shallower; default against this.)
+- **Extension only** — omit `mutations`; the project stays green and they build the new thing.
 
 ## Then
 - Run `scripts/taskify.py correct task_plan.json --out task`.
-- **STOP — confirm difficulty with the user** (your solve-time estimate, the chosen mutation/ask).
-- Proceed to U6 validation.
+- **STOP — confirm difficulty in plain terms:** "this should take ~Xh — fixing the Y bug(s) plus
+  building Z. Good?" Get the user's agreement.

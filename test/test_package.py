@@ -21,9 +21,11 @@ def _task(d):
 
 
 def _taskify(**kw):
-    base = {"mode": "break_code", "mutations": [{"file": "src/sum.py", "kind": "bug", "note": "op"}],
+    base = {"mode": "fix_and_extend", "mutations": [{"file": "src/sum.py", "kind": "bug", "note": "op"}],
             "reference_diff": "--- a/src/sum.py\n+++ b/src/sum.py\n@@ -2 +2 @@\n-    return a - b\n+    return a + b\n",
-            "acceptance_criteria": [{"id": "AC1", "description": "tests pass", "check": "test_command", "weight": 1}],
+            "extension": {"description": "Add a subtract() function.",
+                          "acceptance_criteria": [{"id": "AC_EXT1", "description": "subtract works", "check": "manual", "weight": 1}]},
+            "acceptance_criteria": [{"id": "AC_FIX", "description": "tests pass", "check": "test_command", "weight": 1}],
             "what_to_test": ["fixes operator"]}
     base.update(kw)
     return base
@@ -50,7 +52,8 @@ SOURCE = {"repo": "o/n", "pr": {"number": 12, "title": "fix", "description": "re
 class Assemble(unittest.TestCase):
     def test_scorecard_shape(self):
         sc = package.assemble_scorecard(_taskify(), SOURCE, {"expected_initial_state": {"tests": "red"}}, _meta())
-        self.assertEqual(sc["task_mode"], "break_code")
+        self.assertEqual(sc["task_mode"], "fix_and_extend")
+        self.assertEqual(sc["extension"]["description"], "Add a subtract() function.")
         self.assertEqual(sc["source"]["pr"]["number"], 12)
         self.assertEqual(sc["created_by"]["operator"], "Oskar")
         self.assertEqual(sc["expected_initial_state"]["tests"], "red")

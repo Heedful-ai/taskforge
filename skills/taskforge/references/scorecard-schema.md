@@ -11,16 +11,20 @@ re-scrubs every prose field before zipping. Pinned schema (`schema_version: "1"`
   "language": "python",
   "build_command": "string|null",
   "test_command": "string",
-  "task_mode": "break_code | extend_functionality",
+  "task_mode": "fix_and_extend | fix_bugs | extend",   // default is fix_and_extend (bugs + extension)
 
   // THE EXPECTATION
   "reference_solution": {
-    "diff": "unified diff (task -> correct) | null",   // null for extend_functionality
-    "summary": "what the intended fix / extension is"
+    "diff": "unified diff (task -> correct) | null",   // the bug fix; null when there are no bugs (extend-only)
+    "summary": "what the intended fix is"
   },
-  "acceptance_criteria": [ { "id": "AC1", "description": "...", "check": "test_command|manual", "weight": 1 } ],
+  "extension": {                                        // the build-something ask; null when fix-only
+    "description": "what the candidate must add",
+    "acceptance_criteria": [ { "id": "AC_EXT1", "description": "...", "check": "test_command|manual", "weight": 1 } ]
+  },
+  "acceptance_criteria": [ { "id": "AC_FIX|AC_EXT1", "description": "...", "check": "test_command|manual", "weight": 1 } ],
   "what_to_test": [ "behaviour / quality dimension", "..." ],
-  "mutations": [ { "file": "...", "kind": "bug|removal", "note": "..." } ],   // [] for extend
+  "mutations": [ { "file": "...", "kind": "bug|removal", "note": "..." } ],   // [] for extend-only
   "expected_initial_state": { "tests": "red|green", "matches_expected": true },
 
   // HIRING CONTEXT (collected at intake — what we need on our end to evaluate)

@@ -71,35 +71,46 @@ def diff_dirs(a_dir: str, b_dir: str, exclude: set[str]) -> str:
 
 
 def taskify(correct_dir: str, plan: dict, out_dir: str) -> dict:
-    mode = plan.get("mode")
-    if mode not in ("break_code", "extend_functionality"):
-        return {"ok": False, "error": f"unknown mode: {mode!r}"}
-
+    """A task can carry BOTH bugs to fix AND an extension to build (the default). Derives the mode:
+    fix_and_extend (both) · fix_bugs (bugs only) · extend (extension only)."""
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     shutil.copytree(correct_dir, out_dir)
 
     excluded = set(plan.get("vendored_paths", []) or [])
-    applied: list[dict] = []
+    mutations_in = plan.get("mutations", []) or []      # the bug(s) to fix
+    extension = plan.get("extension")                   # {description, acceptance_criteria} or None
+    if not mutations_in and not extension:
+        return {"ok": False, "error": "task_plan has neither bugs (mutations) nor an extension — nothing to do"}
 
-    if mode == "break_code":
-        for mut in plan.get("mutations", []) or []:
-            rel, find, repl = mut.get("file"), mut.get("find"), mut.get("replace", "")
-            target = os.path.join(out_dir, rel or "")
-            if not rel or not os.path.isfile(target) or find is None:
-                return {"ok": False, "error": f"mutation target invalid: {mut}"}
-            with open(target, encoding="utf-8") as fh:
-                content = fh.read()
-            if find not in content:
-                return {"ok": False, "error": f"mutation 'find' not present in {rel}: {find!r}"}
-            with open(target, "w", encoding="utf-8") as fh:
-                fh.write(content.replace(find, repl, 1))
-            applied.append({"file": rel, "kind": "bug" if repl else "removal", "note": mut.get("note", "")})
-        reference_diff = diff_dirs(out_dir, correct_dir, excluded)  # task -> correct
+    applied: list[dict] = []
+    for mut in mutations_in:
+        rel, find, repl = mut.get("file"), mut.get("find"), mut.get("replace", "")
+        target = os.path.join(out_dir, rel or "")
+        if not rel or not os.path.isfile(target) or find is None:
+            return {"ok": False, "error": f"mutation target invalid: {mut}"}
+        with open(target, encoding="utf-8") as fh:
+            content = fh.read()
+        if find not in content:
+            return {"ok": False, "error": f"mutation 'find' not present in {rel}: {find!r}"}
+        with open(target, "w", encoding="utf-8") as fh:
+            fh.write(content.replace(find, repl, 1))
+        applied.append({"file": rel, "kind": "bug" if repl else "removal", "note": mut.get("note", "")})
+
+    reference_diff = None
+    if applied:
+        reference_diff = diff_dirs(out_dir, correct_dir, excluded)  # task -> correct (the bug fix)
         if not reference_diff:
-            return {"ok": False, "error": "break_code produced no change — task == correct"}
-    else:  # extend_functionality
-        reference_diff = None
+            return {"ok": False, "error": "the bug mutations produced no change — task == correct"}
+
+    mode = "fix_and_extend" if applied and extension else "fix_bugs" if applied else "extend"
+
+    acceptance = list(plan.get("acceptance_criteria", []) or [])
+    if applied and not acceptance:
+        acceptance.append({"id": "AC_FIX", "description": "all existing tests pass (the planted bug is fixed)",
+                           "check": "test_command", "weight": 1})
+    if extension:
+        acceptance += list(extension.get("acceptance_criteria", []) or [])
 
     return {
         "ok": True,
@@ -107,7 +118,8 @@ def taskify(correct_dir: str, plan: dict, out_dir: str) -> dict:
         "mode": mode,
         "mutations": applied,
         "reference_diff": reference_diff,
-        "acceptance_criteria": plan.get("acceptance_criteria", []),
+        "extension": extension,
+        "acceptance_criteria": acceptance,
         "what_to_test": plan.get("what_to_test", []),
     }
 

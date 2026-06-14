@@ -81,14 +81,15 @@ def validate(mode: str, test_cmd: str, build_cmd: str | None, correct_dir: str, 
                 "runtime": runtime, "image": image}
 
     task_run = run_offline(runtime, image, task_dir, test_cmd, build_cmd)
-    if mode == "break_code":
+    fixes_bugs = mode not in ("extend", "extend_functionality")  # fix_bugs / fix_and_extend / break_code
+    if fixes_bugs:
         expected = "red"
         if task_run["passed"]:
-            reasons.append("break_code task tests are GREEN — the breakage didn't make tests fail")
-    else:  # extend_functionality
+            reasons.append("task tests are GREEN — the planted bug didn't make any test fail")
+    else:  # extend-only
         expected = "green"
         if not task_run["passed"]:
-            reasons.append("extend_functionality task tests are RED — the project should still work")
+            reasons.append("extend-only task tests are RED — the project should still pass as-is")
 
     expected_initial_state = {
         "tests": "red" if not task_run["passed"] else "green",

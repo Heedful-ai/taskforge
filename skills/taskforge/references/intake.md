@@ -29,19 +29,16 @@ of engineering. **Identify the 2–4 most substantial ones and present them as s
 the user to choose from.** Do NOT converge on one, and do NOT quietly pick the easiest piece. Cover
 genuinely different parts of the PR (different modules/behaviours/angles), not variations of one theme.
 
-For each option, ~2 lines:
-- **Which part of the PR** it's built on — name the module / function / behaviour.
-- **Mode** — `break_code` (reintroduce a defect to fix) or `extend_functionality` (ask them to build
-  something) — and **what you'd test**, plus the **skills assessed** and a rough difficulty/time.
+Each option is, by **default, a combined task: fix one or two planted bugs AND build a small
+extension** on that part of the system (see `references/task-modes.md`). Fixing bugs alone is too
+shallow. For each option, ~2 lines, in **plain language — never the internal labels**:
+- **Which part of the PR** it's built on — name the module / behaviour.
+- **What the candidate does** — e.g. *"fix two bugs in the append-only versioning, then add a
+  `restoreEntry` that revives a deleted entry"* — plus the **skills assessed** and a rough difficulty/time.
 
-**Offer both modes — never silently default to `break_code`.** For the same piece of logic you can
-often frame *either* a break-task *or* an extend-task; where the PR supports it, include at least one
-`extend_functionality` option in the menu so the user actually gets to choose the mode, not just the
-topic. The mode is the user's decision.
-
-Then **STOP — let the user pick one (or combine).** Their choice (topic **and** mode) becomes
-`assessment.problem_summary`, `assessment.test_focus`, `assessment.skills_assessed`. Ask a clarifying
-question only if something is genuinely ambiguous.
+Then **STOP — let the user pick one (or combine, or ask for just-fix / just-build).** Their choice
+becomes `assessment.problem_summary`, `assessment.test_focus`, `assessment.skills_assessed`. Ask a
+clarifying question only if something is genuinely ambiguous.
 
 ### Pick by substance, NOT by ease of testing
 Choose the options that best represent the PR's **real engineering** — the interesting logic — not

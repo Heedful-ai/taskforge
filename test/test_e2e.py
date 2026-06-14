@@ -53,11 +53,13 @@ CARVE_PLAN = {
     },
 }
 
-TASK_PLAN = {
-    "mode": "break_code",
+TASK_PLAN = {  # the default combined task: a bug to fix AND an extension to build
     "mutations": [{"file": "src/nesting.py", "find": "depth += 1", "replace": "depth -= 1", "note": "inverted increment"}],
-    "acceptance_criteria": [{"id": "AC1", "description": "all tests pass", "check": "test_command", "weight": 1}],
-    "what_to_test": ["restores correct nesting depth", "keeps flat/empty cases"],
+    "extension": {
+        "description": "Add max_depth_with_brackets(s) supporting () [] {} together.",
+        "acceptance_criteria": [{"id": "AC_EXT1", "description": "handles all three bracket types", "check": "manual", "weight": 1}],
+    },
+    "what_to_test": ["restores correct nesting depth", "keeps flat/empty cases", "extension matches braces correctly"],
     "vendored_paths": [],
 }
 
@@ -125,7 +127,8 @@ class EndToEnd(unittest.TestCase):
             self.assertTrue(any(n.startswith("task/src/nesting.py") for n in names))
             self.assertFalse(any("scorecard" in n and n.startswith("task/") for n in names))
             card = json.loads(z.read("scorecard.json"))
-        self.assertEqual(card["task_mode"], "break_code")
+        self.assertEqual(card["task_mode"], "fix_and_extend")
+        self.assertEqual(card["extension"]["description"], TASK_PLAN["extension"]["description"])
         self.assertEqual(card["source"]["pr"]["number"], 7)
         self.assertEqual(card["created_by"]["operator"], "Oskar")
         self.assertIn("depth += 1", card["reference_solution"]["diff"])

@@ -61,15 +61,16 @@ Don't interrogate them about language/topic/stack either; you'll infer that your
 1. With **read-only** `gh` calls, fetch the PR and its linked issue: `gh pr view <n> --json
    number,title,body,url`, `gh pr diff <n>`, and the issue if referenced. Keep these for the scorecard
    `source` block.
-2. **Propose task OPTIONS — a menu, not one answer.** Say what the PR was about + the stack, then for a
-   non-trivial PR present **2–4 distinct task options** drawn from genuinely different interesting
-   parts of the PR (not variations of one theme), each stating its **mode** (`break_code` vs
-   `extend_functionality`), which part it's built on, what you'd test, skills, rough difficulty.
-   **Offer both modes — never silently default to `break_code`;** include an `extend` option where the
-   PR supports it. **STOP — let the user pick the topic AND the mode (or combine).** Choose
-   options by **substance, not by ease of testing**: the offline gate is about the *network*
-   (`--network=none`), NOT about avoiding mocks — mocking a DB/API client runs offline fine, so don't
-   flee meaty logic for a shallow pure-function slice. See `references/intake.md`.
+2. **Propose task OPTIONS in plain language — a menu, not one answer.** Say what the PR was about + the
+   stack, then for a non-trivial PR present **2–4 distinct task options** from genuinely different
+   interesting parts of the PR (not variations of one theme). **Each option is, by default, a combined
+   task: fix one or two planted bugs AND build a small extension** — pure bug-fixing is too shallow.
+   Describe each in plain terms (e.g. *"fix two bugs in the versioning logic, then add a `restoreEntry`
+   function"*) — **never the internal labels.** Give skills + rough difficulty. **STOP — let the user
+   pick one (or combine, or dial to just-fix / just-build).** Choose by **substance, not ease of
+   testing**: the offline gate is about the *network* (`--network=none`), NOT avoiding mocks — mock a
+   DB/API client and carve the meaty logic; don't flee to a shallow pure-function slice. See
+   `references/intake.md`.
 3. **Collect the hiring metadata we need on our end** (for the scorecard, never candidate-facing):
    the **position** they're hiring for, **seniority**, a **job description** (ask them to paste it or
    point at a file/URL — optional), and the **time target** (~1–2h). Plus the operator's name.
@@ -105,14 +106,12 @@ Save the fetched issue text to a file, then run
 refused domain) → STOP, produce nothing.** See `references/safety.md`.
 
 ## Phase 5 — Taskify
-Follow `references/task-modes.md`. Use the mode you already proposed and the user confirmed in Phase 2:
-- `break_code` — introduce 1–3 small realistic defects; or
-- `extend_functionality` — ask the candidate to build something new.
-
-Write `task_plan.json`, then run `python3 scripts/taskify.py correct task_plan.json --out task`. It
-produces `task/`, records the mutations, and (for `break_code`) the reference diff; it writes
-`taskify_result.json`. **STOP — confirm difficulty: state your solve-time estimate (~1–2h) and the
-chosen breakage/ask, and get the user's agreement.**
+Follow `references/task-modes.md`. Build the task the user confirmed in Phase 2 — **by default both:
+1–2 planted bugs to fix AND an extension to build.** Write `task_plan.json` with `mutations` (the bugs)
+and `extension` (the build-something ask + its acceptance criteria), then run
+`python3 scripts/taskify.py correct task_plan.json --out task`. It applies the bugs, generates the
+fix's reference diff, records the extension, and writes `taskify_result.json`. **STOP — confirm
+difficulty in plain terms** (e.g. "~Xh: fix the Y bug(s) + build Z") and get the user's agreement.
 
 ## Phase 6 — Re-validate
 Run `python3 scripts/validate.py --mode <mode> --test "<test_command>" [--build ...] --language <lang>

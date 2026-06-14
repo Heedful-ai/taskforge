@@ -1,4 +1,4 @@
-"""Tests for taskify (U5)."""
+"""Tests for taskify (U5) — combined fix+extend model."""
 import os
 import sys
 import tempfile
@@ -17,76 +17,68 @@ def _correct(d):
     return root
 
 
-def _apply_unified(diff_text, base_dir):
-    """Apply a unified diff (a/ -> b/) to base_dir using `patch`-free manual application via difflib
-    is complex; instead re-derive: we assert the diff transforms task's content into correct's by
-    checking the diff is non-empty and references the changed file."""
-    return diff_text
+_BUG = {"file": "src/sum.py", "find": "a + b", "replace": "a - b", "note": "op"}
+_EXT = {"description": "Add a subtract() function.",
+        "acceptance_criteria": [{"id": "AC_EXT1", "description": "subtract works", "check": "manual", "weight": 1}]}
 
 
-class BreakCode(unittest.TestCase):
-    def test_applies_mutation_and_makes_reference_diff(self):
+class FixBugs(unittest.TestCase):
+    def test_applies_bug_and_makes_reference_diff(self):
         with tempfile.TemporaryDirectory() as d:
             correct = _correct(d)
-            plan = {
-                "mode": "break_code",
-                "mutations": [{"file": "src/sum.py", "find": "a + b", "replace": "a - b", "note": "op"}],
-                "acceptance_criteria": [{"id": "AC1", "description": "tests pass", "check": "test_command", "weight": 1}],
-                "what_to_test": ["fixes the operator"],
-            }
-            out = os.path.join(d, "task")
-            res = taskify.taskify(correct, plan, out)
+            res = taskify.taskify(correct, {"mutations": [_BUG], "what_to_test": ["op"]}, os.path.join(d, "task"))
             self.assertTrue(res["ok"], res.get("error"))
-            # task/ has the broken version
-            self.assertIn("a - b", open(os.path.join(out, "src/sum.py")).read())
-            # reference diff transforms task -> correct (mentions the fix)
+            self.assertEqual(res["mode"], "fix_bugs")
+            self.assertIn("a - b", open(os.path.join(d, "task", "src/sum.py")).read())
             self.assertIn("a + b", res["reference_diff"])
-            self.assertIn("src/sum.py", res["reference_diff"])
             self.assertEqual(res["mutations"][0]["kind"], "bug")
+            self.assertIsNone(res["extension"])
+            self.assertTrue(any(c["id"] == "AC_FIX" for c in res["acceptance_criteria"]))
 
     def test_missing_find_fails(self):
         with tempfile.TemporaryDirectory() as d:
             correct = _correct(d)
-            plan = {"mode": "break_code",
-                    "mutations": [{"file": "src/sum.py", "find": "NOT THERE", "replace": "x"}]}
-            res = taskify.taskify(correct, plan, os.path.join(d, "task"))
+            res = taskify.taskify(correct, {"mutations": [{"file": "src/sum.py", "find": "ZZZ", "replace": "x"}]},
+                                  os.path.join(d, "task"))
             self.assertFalse(res["ok"])
             self.assertIn("not present", res["error"])
 
-    def test_no_change_fails(self):
+
+class FixAndExtend(unittest.TestCase):
+    def test_default_combined_task(self):
         with tempfile.TemporaryDirectory() as d:
             correct = _correct(d)
-            plan = {"mode": "break_code", "mutations": []}
-            res = taskify.taskify(correct, plan, os.path.join(d, "task"))
-            self.assertFalse(res["ok"])
-            self.assertIn("no change", res["error"])
-
-
-class ExtendFunctionality(unittest.TestCase):
-    def test_task_equals_correct_and_null_diff(self):
-        with tempfile.TemporaryDirectory() as d:
-            correct = _correct(d)
-            plan = {
-                "mode": "extend_functionality",
-                "acceptance_criteria": [{"id": "AC1", "description": "adds flag", "check": "manual", "weight": 1}],
-                "what_to_test": ["clean api"],
-            }
-            out = os.path.join(d, "task")
-            res = taskify.taskify(correct, plan, out)
+            res = taskify.taskify(correct, {"mutations": [_BUG], "extension": _EXT}, os.path.join(d, "task"))
             self.assertTrue(res["ok"], res.get("error"))
+            self.assertEqual(res["mode"], "fix_and_extend")
+            self.assertIn("a + b", res["reference_diff"])          # the fix
+            self.assertEqual(res["extension"]["description"], _EXT["description"])
+            ids = [c["id"] for c in res["acceptance_criteria"]]
+            self.assertIn("AC_FIX", ids)       # the bug-fix criterion
+            self.assertIn("AC_EXT1", ids)      # the extension criterion
+
+
+class ExtendOnly(unittest.TestCase):
+    def test_extension_only(self):
+        with tempfile.TemporaryDirectory() as d:
+            correct = _correct(d)
+            res = taskify.taskify(correct, {"extension": _EXT}, os.path.join(d, "task"))
+            self.assertTrue(res["ok"], res.get("error"))
+            self.assertEqual(res["mode"], "extend")
             self.assertIsNone(res["reference_diff"])
             self.assertEqual(res["mutations"], [])
-            self.assertEqual(open(os.path.join(out, "src/sum.py")).read(),
+            self.assertEqual(open(os.path.join(d, "task", "src/sum.py")).read(),
                              open(os.path.join(correct, "src/sum.py")).read())
-            self.assertTrue(res["acceptance_criteria"])
+            self.assertIn("AC_EXT1", [c["id"] for c in res["acceptance_criteria"]])
 
 
-class UnknownMode(unittest.TestCase):
-    def test_rejects_unknown_mode(self):
+class NothingToDo(unittest.TestCase):
+    def test_empty_plan_fails(self):
         with tempfile.TemporaryDirectory() as d:
             correct = _correct(d)
-            res = taskify.taskify(correct, {"mode": "nope"}, os.path.join(d, "task"))
+            res = taskify.taskify(correct, {"what_to_test": []}, os.path.join(d, "task"))
             self.assertFalse(res["ok"])
+            self.assertIn("nothing to do", res["error"])
 
 
 class DiffExcludesVendored(unittest.TestCase):
@@ -96,10 +88,8 @@ class DiffExcludesVendored(unittest.TestCase):
             os.makedirs(os.path.join(correct, "node_modules", "p"))
             with open(os.path.join(correct, "node_modules", "p", "x.js"), "w") as fh:
                 fh.write("module.exports = 1\n")
-            plan = {"mode": "break_code",
-                    "mutations": [{"file": "src/sum.py", "find": "a + b", "replace": "a - b"}],
-                    "vendored_paths": ["node_modules"]}
-            res = taskify.taskify(correct, plan, os.path.join(d, "task"))
+            res = taskify.taskify(correct, {"mutations": [_BUG], "vendored_paths": ["node_modules"]},
+                                  os.path.join(d, "task"))
             self.assertTrue(res["ok"], res.get("error"))
             self.assertNotIn("node_modules", res["reference_diff"])
 

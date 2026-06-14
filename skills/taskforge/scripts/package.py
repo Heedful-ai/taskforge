@@ -46,7 +46,8 @@ def assemble_scorecard(taskify: dict, source: dict, validate_report: dict | None
         },
         "acceptance_criteria": taskify.get("acceptance_criteria", []),
         "what_to_test": taskify.get("what_to_test", []),
-        "mutations": taskify.get("mutations", []),
+        "mutations": taskify.get("mutations", []),            # the planted bug(s)
+        "extension": taskify.get("extension"),                # {description, acceptance_criteria} or null
         "expected_initial_state": (validate_report or {}).get("expected_initial_state", {}),
         # hiring context — what we collect on our end to evaluate the candidate later
         "hiring": {
@@ -77,6 +78,8 @@ def _prose_blobs(sc: dict) -> list[tuple[str, str]]:
     out.append(("reference_solution.diff", rs.get("diff") or ""))
     out.append(("reference_solution.summary", rs.get("summary") or ""))
     out.append(("notes_for_evaluator", sc.get("notes_for_evaluator") or ""))
+    ext = sc.get("extension") or {}
+    out.append(("extension.description", ext.get("description") or ""))
     hir = sc.get("hiring") or {}
     out.append(("hiring.job_description", hir.get("job_description") or ""))
     asmt = sc.get("assessment") or {}
@@ -119,6 +122,9 @@ def redact_scorecard_pii(sc: dict) -> int:
     if "diff" in rs:
         rs["diff"] = red(rs.get("diff")) if rs.get("diff") else rs.get("diff")
     sc["notes_for_evaluator"] = red(sc.get("notes_for_evaluator"))
+    ext = sc.get("extension") or {}
+    if "description" in ext:
+        ext["description"] = red(ext.get("description"))
     hir = sc.get("hiring") or {}
     if "job_description" in hir:
         hir["job_description"] = red(hir.get("job_description"))
