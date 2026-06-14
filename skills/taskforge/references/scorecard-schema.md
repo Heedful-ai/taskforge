@@ -65,7 +65,12 @@ is never shipped to the candidate. Pinned schema (`schema_version: "2"`):
 }
 ```
 
-## How the evaluator uses it (no task_mode branching)
+## How jelly's pipeline uses it (NOT operator-facing — never relay this to the user)
+> The "evaluator" is **jelly's automated grading pipeline**, not the hiring company running taskforge.
+> The skill PRODUCES this file inside the bundle; the user ships the bundle to jelly and is **done**.
+> Never turn the steps below into instructions for the user, and never tell them to run the hidden suite
+> / `npm test` on a submission. This documents the data contract for jelly's side only.
+
 - Run `behavior_suite.core` (via `hidden_test_command`) against the candidate's submission → that's the
   automated grade. `behavior_suite.stretch` is informative (partial credit).
 - Apply `grading.human_rubric` to the design dimension + `grading.notes_evaluation` to `NOTES.md`.

@@ -24,6 +24,13 @@ it** — it does NOT hand them the solution. Run this collaboratively. **Determi
 the fragile and safety-critical work — run them; do not reimplement their logic.** You (the agent)
 design the *task* — grounded in `references/task-design.md`, not a fixed formula.
 
+> **Who does what — do not confuse these.** The user is a **hiring company** who runs this **only to
+> produce `task-bundle.zip` and send it to jelly.** Their job ends at shipping the bundle. **jelly (the
+> evaluation platform) administers the task to the candidate and produces the score** — the user never
+> runs the task, never runs the hidden suite, never grades a submission. Everything in `scorecard.json`
+> (hidden suite, rubric, NOTES eval) is **data for jelly's pipeline, not instructions for the user.**
+> **Never tell the user how to grade, or to run `npm test` / the hidden suite on a candidate's work.**
+
 Work in a scratch dir (e.g. `./work`). Paths below are relative to the skill root for scripts/refs,
 and to the scratch dir for artifacts (`correct/`, `task/`, `hidden/`, `*.json`, the zip).
 
@@ -145,8 +152,14 @@ Assemble `meta.json`:
 Then run `python3 scripts/package.py --task task --taskify taskify_result.json --source
 source_context.json --validate validate_report.json --meta meta.json --out task-bundle.zip`. It embeds
 the hidden suite + rubric into `scorecard.json` (trusted sibling), re-scrubs all prose (fail-closed),
-and asserts the layout (hidden suite never under `task/`). Hand the user `task-bundle.zip` — tell them
-`scorecard.json` (the hidden suite + answer key) is trusted and must **never** be given to the candidate.
+and asserts the layout (hidden suite never under `task/`).
+
+**Hand off — the user's job ends here.** Tell them exactly one thing: **send `task-bundle.zip` to
+jelly.** jelly administers the task to the candidate and produces the score. **Do NOT** give the user
+grading steps, do NOT tell them to run `npm test` / the hidden suite on a submission, do NOT summarize
+"how to grade" — that is jelly's pipeline, not the user's job (see the *Who does what* note up top). The
+only caution to relay: `scorecard.json` is the trusted answer key — they must never send it (or any part
+of the bundle's hidden suite) to a candidate. Then stop.
 
 ---
 
