@@ -32,8 +32,14 @@ import scrub  # noqa: E402
 EXCLUDE_DIRS = {"node_modules", ".venv", "venv", ".git", "dist", "build", ".next", "coverage", "__pycache__"}
 
 
+# Per-language default install command, so the bundle is fully install-driven (jelly's KTD3 runs
+# this in a throwaway container; a human runs it by hand). Override via meta["install_command"].
+DEFAULT_INSTALL = {"node": "npm ci", "python": "pip install -r requirements.txt", "ruby": "bundle install"}
+
+
 def build_context(taskify: dict, source: dict, meta: dict) -> dict:
     asmt = meta.get("assessment") or {}
+    language = meta.get("language", "")
     return {
         "task_id": meta.get("task_id", ""),
         "created_at": meta.get("created_at", ""),
@@ -47,9 +53,13 @@ def build_context(taskify: dict, source: dict, meta: dict) -> dict:
         },
         "hiring": meta.get("hiring") or {},
         "pr_suitability": meta.get("pr_suitability") or {"verdict": "", "reasons": []},
+        # Machine-readable rubric so jelly's eval reads it structurally instead of parsing
+        # EVALUATION.md prose. Same shape EVALUATION.md renders from (taskify.human_rubric).
+        "rubric": taskify.get("human_rubric") or [],
         "task_mode": taskify.get("task_mode", ""),
-        "language": meta.get("language", ""),
+        "language": language,
         "build_command": meta.get("build_command"),
+        "install_command": meta.get("install_command") or DEFAULT_INSTALL.get(language),
         "test_command": meta.get("test_command", ""),
         "skill_version": meta.get("skill_version", ""),
         "spec_version": meta.get("spec_version", ""),

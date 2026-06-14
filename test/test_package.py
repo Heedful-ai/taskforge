@@ -81,6 +81,17 @@ class Context(unittest.TestCase):
         self.assertNotIn("behavior_suite", ctx)
         self.assertNotIn("reference_exemplar", ctx)
 
+    def test_context_carries_rubric_and_install_command(self):
+        # U12: jelly reads the rubric structurally + the install is fully bundle-driven (KTD3).
+        ctx = package.build_context(_taskify(), SOURCE, _meta())
+        self.assertEqual(ctx["rubric"][0]["dimension"], "model choice")
+        self.assertEqual(ctx["rubric"][0]["acceptable_approaches"], ["append-only", "snapshots"])
+        self.assertEqual(ctx["install_command"], "npm ci")  # default for node
+
+    def test_install_command_override(self):
+        ctx = package.build_context(_taskify(), SOURCE, _meta(install_command="pnpm i --frozen-lockfile"))
+        self.assertEqual(ctx["install_command"], "pnpm i --frozen-lockfile")
+
 
 class Evaluation(unittest.TestCase):
     def test_evaluation_md_content(self):

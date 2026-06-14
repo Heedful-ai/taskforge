@@ -15,7 +15,8 @@ task-bundle.zip
 │   └── reference/           the team's solution for the files the candidate builds/fixes — ONE
 │                            acceptable approach, never a similarity target
 └── context.json            app metadata (not grading): who made it, source PR/issue, discussion
-                            summary, role/seniority, suitability verdict, language + run commands
+                            summary, role/seniority, suitability verdict, language + run commands,
+                            the machine-readable `rubric`, and the `install_command`
 ```
 
 What it deliberately does **not** contain: no `node_modules`/vendored deps (the lockfile is enough;
@@ -35,8 +36,9 @@ no checksums.
   "assessment": { "problem_summary": "...", "test_focus": "...", "skills_assessed": ["..."] },
   "hiring": { "position": "...", "seniority": "senior", "job_description": "...", "time_target_hours": 1.5 },
   "pr_suitability": { "verdict": "recommend|flag|refuse", "reasons": ["..."] },
+  "rubric": [ { "dimension": "...", "acceptable_approaches": ["..."], "what_good_looks_like": "..." } ],
   "task_mode": "descriptive string (e.g. 'build (senior): design the model + fix a bug')",
-  "language": "node", "build_command": null, "test_command": "npm test",
+  "language": "node", "build_command": null, "install_command": "npm ci", "test_command": "npm test",
   "skill_version": "...", "spec_version": "agentskills.io"
 }
 ```
