@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
-"""package.py — assemble task-bundle.zip with the pinned layout + scorecard contract (U7).
+"""package.py — assemble task-bundle.zip with the pinned layout + scorecard contract (U6).
 
 Layout (the wall between candidate-facing and trusted is structural):
   task-bundle.zip
-    task/          <- candidate-facing (the project + BRIEF.md)
-    scorecard.json <- TRUSTED answer/eval record (sibling, never under task/)
+    task/          <- candidate-facing (the project + example tests + BRIEF.md)
+    scorecard.json <- TRUSTED eval record (sibling, never under task/) — carries the HIDDEN suite
     manifest.json  <- language, commands, sizes, checksums, versions
 
-Before zipping it re-scrubs every scorecard prose field (these are agent/gh-derived — KTD8) and fails
-closed on any finding. Refuses to package unless given a clean scrub + a green validate. Stdlib only.
+Problem-first model (schema v2): the scorecard carries the hidden `behavior_suite` (the real grade,
+tiered core/stretch), the `reference_exemplar` (ONE acceptable solution, not a similarity target), a
+`grading` block (behaviour + partial-credit + human rubric + NOTES eval), and `pr_suitability`.
+`task_mode` is a descriptive string only (NOT in the manifest — nothing downstream may branch on it).
+
+Before zipping it re-scrubs every scorecard prose field — including the largest new blob, the hidden
+test source — and fails closed on any secret. Stdlib only.
 
 Usage:
-  python3 package.py --task DIR --taskify F --source F --meta F [--validate F] --out bundle.zip
+  python3 package.py --task DIR --taskify F --meta F [--source F] [--validate F] --out bundle.zip
 Exit: 0 ok · 2 scorecard prose tripped the scrub (no zip) · 4 usage/error.
-
---meta F is JSON: { "task_id", "language", "build_command", "test_command",
-                    "created_by": {"operator","email","gh_login"},
-                    "skill_version", "spec_version", "created_at", "notes_for_evaluator" }
 """
 from __future__ import annotations
 
@@ -29,34 +30,69 @@ import zipfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import scrub  # noqa: E402
 
-SCHEMA_VERSION = "1"
+SCHEMA_VERSION = "2"
+
+
+def _load_hidden(taskify: dict) -> dict:
+    """Read the withheld suite files from taskify's sibling hidden/ dir into the scorecard.
+    Returns {core:[{path,content}], stretch:[...]}. Empty when no hidden suite was authored."""
+    out = {"core": [], "stretch": []}
+    hidden_dir = taskify.get("hidden_tests_dir")
+    tiers = taskify.get("hidden_tiers") or {}
+    if not hidden_dir:
+        return out
+    for tier in ("core", "stretch"):
+        for rel in tiers.get(tier, []) or []:
+            full = os.path.join(hidden_dir, tier, rel)
+            try:
+                with open(full, encoding="utf-8") as fh:
+                    out[tier].append({"path": rel, "content": fh.read()})
+            except OSError:
+                out[tier].append({"path": rel, "content": ""})
+    return out
 
 
 def assemble_scorecard(taskify: dict, source: dict, validate_report: dict | None, meta: dict) -> dict:
+    grading_meta = meta.get("grading") or {}
     return {
         "schema_version": SCHEMA_VERSION,
         "task_id": meta.get("task_id", ""),
         "language": meta.get("language", ""),
         "build_command": meta.get("build_command"),
         "test_command": meta.get("test_command", ""),
-        "task_mode": taskify.get("mode", ""),
-        "reference_solution": {
-            "diff": taskify.get("reference_diff"),
+        "hidden_test_command": meta.get("hidden_test_command", ""),
+        # descriptive ONLY — carries the calibration anchors; never a control-flow switch (U9)
+        "task_mode": taskify.get("task_mode", ""),
+        # ONE acceptable solution — score different-but-correct HIGHER, never a similarity target
+        "reference_exemplar": {
+            "diff": taskify.get("reference_exemplar"),
             "summary": meta.get("reference_summary", ""),
         },
+        # the real grade — tiered, hidden, trusted-side
+        "behavior_suite": _load_hidden(taskify),
+        "grading": {
+            "approach": "behaviour/invariants",
+            "partial_credit": grading_meta.get("partial_credit",
+                "verdict = core-suite pass + how far into stretch + human rubric on design & NOTES; "
+                "NOT whole-suite-green (the task is intentionally bigger than finishable)"),
+            "human_rubric": taskify.get("human_rubric", []) or [],
+            "notes_evaluation": taskify.get("notes_evaluation", {}) or {},
+        },
+        "notes_required": True,
+        "pr_suitability": meta.get("pr_suitability") or {"verdict": "", "reasons": []},
         "acceptance_criteria": taskify.get("acceptance_criteria", []),
         "what_to_test": taskify.get("what_to_test", []),
-        "mutations": taskify.get("mutations", []),            # the planted bug(s)
-        "extension": taskify.get("extension"),                # {description, acceptance_criteria} or null
+        "mutations": taskify.get("mutations", []),
+        "extension": taskify.get("extension"),
+        "scale": taskify.get("scale"),
+        "seeded_failure": taskify.get("seeded_failure"),
         "expected_initial_state": (validate_report or {}).get("expected_initial_state", {}),
-        # hiring context — what we collect on our end to evaluate the candidate later
         "hiring": {
             "position": (meta.get("hiring") or {}).get("position", ""),
             "seniority": (meta.get("hiring") or {}).get("seniority", ""),
             "job_description": (meta.get("hiring") or {}).get("job_description", ""),
             "time_target_hours": (meta.get("hiring") or {}).get("time_target_hours"),
         },
-        # the AI's read of the task (proposed, user-confirmed)
         "assessment": {
             "problem_summary": (meta.get("assessment") or {}).get("problem_summary", ""),
             "test_focus": (meta.get("assessment") or {}).get("test_focus", ""),
@@ -72,11 +108,27 @@ def assemble_scorecard(taskify: dict, source: dict, validate_report: dict | None
 
 
 def _prose_blobs(sc: dict) -> list[tuple[str, str]]:
-    """Every free-text field that could carry a secret — labelled for the scrub report."""
+    """Every free-text field that could carry a secret — labelled. Every new v2 field is enumerated
+    here in lockstep; a field omitted here is silently skipped by the scrub (a real leak path)."""
     out: list[tuple[str, str]] = []
-    rs = sc.get("reference_solution") or {}
-    out.append(("reference_solution.diff", rs.get("diff") or ""))
-    out.append(("reference_solution.summary", rs.get("summary") or ""))
+    rx = sc.get("reference_exemplar") or {}
+    out.append(("reference_exemplar.diff", rx.get("diff") or ""))
+    out.append(("reference_exemplar.summary", rx.get("summary") or ""))
+    # the hidden behaviour suite — the LARGEST new blob; test source can carry a copied key
+    bs = sc.get("behavior_suite") or {}
+    for tier in ("core", "stretch"):
+        for i, t in enumerate(bs.get(tier) or []):
+            out.append((f"behavior_suite.{tier}[{i}]", t.get("content") or ""))
+    grd = sc.get("grading") or {}
+    out.append(("grading.partial_credit", grd.get("partial_credit") or ""))
+    out.append(("grading.notes_evaluation", json.dumps(grd.get("notes_evaluation") or {})))
+    for i, r in enumerate(grd.get("human_rubric") or []):
+        out.append((f"grading.human_rubric[{i}].what_good_looks_like", r.get("what_good_looks_like") or ""))
+        for j, a in enumerate(r.get("acceptable_approaches") or []):
+            out.append((f"grading.human_rubric[{i}].acceptable_approaches[{j}]", a or ""))
+    prs = sc.get("pr_suitability") or {}
+    for i, r in enumerate(prs.get("reasons") or []):
+        out.append((f"pr_suitability.reasons[{i}]", r or ""))
     out.append(("notes_for_evaluator", sc.get("notes_for_evaluator") or ""))
     ext = sc.get("extension") or {}
     out.append(("extension.description", ext.get("description") or ""))
@@ -105,9 +157,8 @@ def scrub_scorecard(sc: dict) -> list:
 
 
 def redact_scorecard_pii(sc: dict) -> int:
-    """Redact emails (PII) in the trusted source/prose fields in place — committer emails in captured
-    git provenance are normal metadata, not a leak, and the scorecard is never candidate-facing.
-    Secrets are NOT touched here (they hard-fail upstream). Returns the number of redactions."""
+    """Redact emails (PII) in trusted prose in place. Secrets are NOT touched here (they hard-fail
+    upstream). Covers the same field set as _prose_blobs. Returns the redaction count."""
     total = 0
 
     def red(s):
@@ -116,11 +167,26 @@ def redact_scorecard_pii(sc: dict) -> int:
         total += n
         return out
 
-    rs = sc.get("reference_solution") or {}
-    if "summary" in rs:
-        rs["summary"] = red(rs.get("summary"))
-    if "diff" in rs:
-        rs["diff"] = red(rs.get("diff")) if rs.get("diff") else rs.get("diff")
+    rx = sc.get("reference_exemplar") or {}
+    if "summary" in rx:
+        rx["summary"] = red(rx.get("summary"))
+    if rx.get("diff"):
+        rx["diff"] = red(rx.get("diff"))
+    bs = sc.get("behavior_suite") or {}
+    for tier in ("core", "stretch"):
+        for t in bs.get(tier) or []:
+            t["content"] = red(t.get("content"))
+    grd = sc.get("grading") or {}
+    if "partial_credit" in grd:
+        grd["partial_credit"] = red(grd.get("partial_credit"))
+    for r in grd.get("human_rubric") or []:
+        if "what_good_looks_like" in r:
+            r["what_good_looks_like"] = red(r.get("what_good_looks_like"))
+        if r.get("acceptable_approaches"):
+            r["acceptable_approaches"] = [red(a) for a in r["acceptable_approaches"]]
+    prs = sc.get("pr_suitability") or {}
+    if prs.get("reasons"):
+        prs["reasons"] = [red(x) for x in prs["reasons"]]
     sc["notes_for_evaluator"] = red(sc.get("notes_for_evaluator"))
     ext = sc.get("extension") or {}
     if "description" in ext:
@@ -139,7 +205,8 @@ def redact_scorecard_pii(sc: dict) -> int:
     src = sc.get("source") or {}
     pr, iss = src.get("pr") or {}, src.get("issue") or {}
     if pr:
-        pr["diff"] = red(pr.get("diff")) if pr.get("diff") else pr.get("diff")
+        if pr.get("diff"):
+            pr["diff"] = red(pr.get("diff"))
         pr["description"] = red(pr.get("description"))
     if iss:
         iss["body"] = red(iss.get("body"))
@@ -169,7 +236,7 @@ def build_manifest(sc: dict, task_dir: str) -> dict:
         "language": sc["language"],
         "build_command": sc["build_command"],
         "test_command": sc["test_command"],
-        "task_mode": sc["task_mode"],
+        # NOTE: task_mode is intentionally NOT in the manifest — the receiver must not branch on it (U9).
         "file_count": len(sums),
         "total_bytes": total,
         "checksums": sums,
@@ -185,7 +252,6 @@ def write_bundle(task_dir: str, scorecard: dict, manifest: dict, out_zip: str) -
     if secrets:  # a real secret in our own record → fail closed, no zip
         return {"ok": False, "reason": "scorecard prose contains a secret",
                 "findings": [f"{f.rule}@{f.where}:{f.line}" for f in secrets]}
-    # PII (emails) in trusted git-provenance prose → redact in place, then continue
     pii_redactions = redact_scorecard_pii(scorecard)
 
     with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as z:
@@ -197,10 +263,15 @@ def write_bundle(task_dir: str, scorecard: dict, manifest: dict, out_zip: str) -
         z.writestr("scorecard.json", json.dumps(scorecard, indent=2))
         z.writestr("manifest.json", json.dumps(manifest, indent=2))
 
-    # structural guarantee: the trusted files are never under task/
     with zipfile.ZipFile(out_zip) as z:
         names = z.namelist()
+    # structural guarantees: trusted files never under task/, and the hidden suite never shipped to task/
     assert "scorecard.json" in names and not any(n.startswith("task/scorecard.json") for n in names)
+    task_names = {n[len("task/"):] for n in names if n.startswith("task/")}
+    bs = scorecard.get("behavior_suite") or {}
+    for tier in ("core", "stretch"):
+        for t in bs.get(tier) or []:
+            assert t["path"] not in task_names, f"hidden suite leaked into task/: {t['path']}"
     return {"ok": True, "out": out_zip, "entries": len(names), "pii_redactions": pii_redactions,
             "task_mode": scorecard["task_mode"], "files": manifest["file_count"]}
 
