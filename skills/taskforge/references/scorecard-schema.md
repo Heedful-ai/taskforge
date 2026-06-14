@@ -1,9 +1,9 @@
-# scorecard.json — the trusted evaluation record (schema v2)
+# scorecard.json — the answer key (schema v2)
 
-`scorecard.json` is the **non-candidate-facing** record the evaluating team reads. It ships in
-`task-bundle.zip` as a **sibling of `task/`**, never inside it. `package.py` assembles it and re-scrubs
-every prose field before zipping. The hidden **behaviour suite is the real grade and rides here** — it
-is never shipped to the candidate. Pinned schema (`schema_version: "2"`):
+`scorecard.json` is the **answer key**: the reference solution, the hidden behaviour suite, and the
+rubric. It ships in `task-bundle.zip` as a **sibling of `task/`** (not inside it, so the candidate-
+facing `task/` stays clean — if you send a candidate the task, you send them `task/`). `package.py`
+assembles it and scrubs prose for secrets before zipping. Pinned schema (`schema_version: "2"`):
 
 ```jsonc
 {
@@ -65,14 +65,12 @@ is never shipped to the candidate. Pinned schema (`schema_version: "2"`):
 }
 ```
 
-## How jelly's pipeline uses it (NOT operator-facing — never relay this to the user)
-> The "evaluator" is **jelly's automated grading pipeline**, not the hiring company running taskforge.
-> The skill PRODUCES this file inside the bundle; the user ships the bundle to jelly and is **done**.
-> Never turn the steps below into instructions for the user, and never tell them to run the hidden suite
-> / `npm test` on a submission. This documents the data contract for jelly's side only.
+## Using the scorecard — the answer key (jelly's pipeline, or a human grading by hand)
+The scorecard is the **answer key**. jelly's automated pipeline reads it; a human grading manually can
+use the same fields. The skill just produces it — it doesn't run grading or emit a grading walkthrough.
 
-- Run `behavior_suite.core` (via `hidden_test_command`) against the candidate's submission → that's the
-  automated grade. `behavior_suite.stretch` is informative (partial credit).
+- `behavior_suite.core` (run via `hidden_test_command`) is the automated check against a submission;
+  `behavior_suite.stretch` is informative (partial credit).
 - Apply `grading.human_rubric` to the design dimension + `grading.notes_evaluation` to `NOTES.md`.
 - Treat `reference_exemplar` as **one** acceptable solution, NOT a target — a cleaner different correct
   solution scores higher.
