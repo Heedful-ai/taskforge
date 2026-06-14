@@ -1,17 +1,19 @@
 # taskforge
 
-An installable **AI Agent Skill** that turns one of your real GitHub issues/PRs into a
-bounded, self-contained **candidate coding task** — and a trusted scorecard for the people
+An installable **AI Agent Skill** that turns one of your real merged GitHub PRs into a
+bounded, self-contained **candidate coding task** — problem-first, so a senior candidate must
+design and justify a solution, not transcribe one — plus a trusted scorecard for the people
 evaluating the result.
 
 You run it inside your own coding agent (Claude Code, Codex, …). Working with you, it:
 
 1. interviews you about the role and what you want to test,
-2. pulls a real issue/PR with the `gh` CLI,
+2. scores a real merged PR's task-suitability and pulls it with the `gh` CLI,
 3. carves the relevant code into a standalone, runnable project,
 4. proves that project builds + tests **offline**,
-5. turns it into a task — either **breaks working code** to be fixed, or asks the candidate to
-   **extend functionality**,
+5. turns it into a **problem the candidate must design and solve** — it presents the problem +
+   worked scenarios (never the solution), grades behaviour with a **hidden test suite**, and asks
+   for a `NOTES.md` explaining their approach and where the AI was wrong,
 6. writes a candidate-facing `BRIEF.md`,
 7. packages a `task-bundle.zip` you hand off for evaluation.
 
@@ -31,7 +33,7 @@ cp -r taskforge/skills/taskforge ~/.claude/skills/      # Claude Code
 cp -r taskforge/skills/taskforge ~/.agents/skills/      # Codex & others
 ```
 
-Then ask your agent: **"build a candidate coding task from issue <url>"**.
+Then ask your agent: **"build a candidate coding task from PR <url>"**.
 
 ## Requirements
 
