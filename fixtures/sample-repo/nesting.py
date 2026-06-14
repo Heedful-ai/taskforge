@@ -1,7 +1,7 @@
-"""Tiny self-contained module used by the taskforge self-test fixture."""
+"""Tiny self-contained module used by the taskforge self-test fixture (the 'solution' world)."""
 
 
-def max_depth(s: str) -> int:
+def max_depth(s):
     """Maximum depth of nested parentheses in s."""
     depth = 0
     best = 0

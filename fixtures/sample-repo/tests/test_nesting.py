@@ -1,9 +1,8 @@
-import os
-import sys
+"""The team's own tests — green on the solution world. taskify STRIPS these from task/ (they'd spoil
+and the candidate writes their own); the hidden suite is what actually grades."""
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-from nesting import max_depth  # noqa: E402
+from nesting import max_depth
 
 
 class TestMaxDepth(unittest.TestCase):

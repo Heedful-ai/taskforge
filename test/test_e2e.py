@@ -1,7 +1,8 @@
-"""End-to-end self-test (U8): drive the whole deterministic pipeline on the fixture repo.
+"""End-to-end self-test (U8): drive the whole problem-first pipeline on the fixture repo.
 
 Non-container stages always run (carve, scrub, taskify, package, validate_carve). The offline
-container validation runs only when Docker + python:3.11-slim are available.
+container validation (hidden-suite green/red + RED-for-right-reason) runs only when Docker +
+python:3.11-slim are available.
 """
 import json
 import os
@@ -23,6 +24,7 @@ import validate_carve  # noqa: E402
 
 FIXTURE = os.path.join(HERE, "..", "fixtures", "sample-repo")
 TEST_CMD = "python3 -m unittest discover -s tests"
+HIDDEN_CMD = "python3 -m unittest discover -s _hidden"
 
 
 def _docker_ready() -> bool:
@@ -40,34 +42,69 @@ DOCKER = _docker_ready()
 
 CARVE_PLAN = {
     "language": "python",
-    "files": ["src/nesting.py", "tests/test_nesting.py", "pyproject.toml"],
-    "entrypoint": "src/nesting.py",
+    "files": ["nesting.py", "report.py", "tests/test_nesting.py", "pyproject.toml"],
+    "entrypoint": "nesting.py",
     "build_command": None,
     "test_command": TEST_CMD,
     "vendor_commands": [],
     "vendored_paths": [],
     "source": {
         "repo": "demo/nesting",
-        "pr": {"number": 7, "title": "fix nesting depth", "description": "the team's real fix", "url": "u", "diff": "diff"},
-        "issue": {"number": 5, "title": "wrong nesting depth", "body": "max_depth is off", "url": "u"},
+        "pr": {"number": 5, "title": "nesting depth model", "description": "the team's real solution", "url": "u", "diff": "d"},
+        "issue": {"number": 3, "title": "need nesting depth", "body": "compute max nesting depth", "url": "u"},
     },
 }
 
-TASK_PLAN = {  # the default combined task: a bug to fix AND an extension to build
-    "mutations": [{"file": "src/nesting.py", "find": "depth += 1", "replace": "depth -= 1", "note": "inverted increment"}],
-    "extension": {
-        "description": "Add max_depth_with_brackets(s) supporting () [] {} together.",
-        "acceptance_criteria": [{"id": "AC_EXT1", "description": "handles all three bracket types", "check": "manual", "weight": 1}],
-    },
-    "what_to_test": ["restores correct nesting depth", "keeps flat/empty cases", "extension matches braces correctly"],
+# the real solution body that the stub replaces (exact substring of nesting.py)
+SOLUTION_BODY = (
+    "    depth = 0\n"
+    "    best = 0\n"
+    "    for ch in s:\n"
+    '        if ch == "(":\n'
+    "            depth += 1\n"
+    "            if depth > best:\n"
+    "                best = depth\n"
+    '        elif ch == ")":\n'
+    "            depth -= 1\n"
+    "    return best"
+)
+
+EXAMPLE = ("import unittest\nimport report\n\nclass T(unittest.TestCase):\n"
+           "    def test_imports(self):\n        self.assertTrue(hasattr(report, 'summary'))\n")
+CORE = ("import unittest\nfrom nesting import max_depth\n\nclass T(unittest.TestCase):\n"
+        "    def test_depths(self):\n"
+        "        self.assertEqual(max_depth('(())'), 2)\n"
+        "        self.assertEqual(max_depth('()()'), 1)\n"
+        "        self.assertEqual(max_depth(''), 0)\n")
+STRETCH = ("import unittest\nfrom nesting import max_depth\n\nclass T(unittest.TestCase):\n"
+           "    def test_deep(self):\n        self.assertEqual(max_depth('((((()))))'), 5)\n")
+
+# problem-first task: gut the solution to a stub the candidate builds; ship a mechanics example test;
+# withhold a tiered hidden behaviour suite.
+TASK_PLAN = {
+    "task_mode": "design (senior): build the depth model + a deep-nesting stretch",
+    "mutations": [{"file": "nesting.py", "find": SOLUTION_BODY,
+                   "replace": "    raise NotImplementedError  # TODO: compute the max nesting depth",
+                   "kind": "stub", "note": "candidate builds the depth computation"}],
+    "strip_paths": ["tests/test_nesting.py"],
+    "example_tests": [{"path": "tests/test_example.py", "content": EXAMPLE}],
+    "hidden_tests": {"core": [{"path": "test_core.py", "content": CORE}],
+                     "stretch": [{"path": "test_stretch.py", "content": STRETCH}]},
+    "human_rubric": [{"dimension": "approach", "acceptable_approaches": ["counter", "stack"],
+                      "what_good_looks_like": "handles unbalanced input gracefully"}],
+    "what_to_test": ["correct max depth", "handles flat/empty"],
     "vendored_paths": [],
 }
 
 META = {
     "task_id": "nesting-001", "language": "python", "build_command": None, "test_command": TEST_CMD,
+    "hidden_test_command": HIDDEN_CMD,
     "created_by": {"operator": "Oskar", "email": None, "gh_login": "oz"},
-    "skill_version": "0.1.0", "spec_version": "agentskills.io", "created_at": "2026-06-13T12:00:00Z",
-    "reference_summary": "restore the depth increment", "notes_for_evaluator": "",
+    "hiring": {"position": "Senior Backend Engineer", "seniority": "senior", "job_description": "", "time_target_hours": 1.5},
+    "assessment": {"problem_summary": "compute nesting depth", "test_focus": "depth correctness", "skills_assessed": ["parsing"]},
+    "pr_suitability": {"verdict": "recommend", "reasons": ["multiple approaches: counter vs stack"]},
+    "skill_version": "0.2.0", "spec_version": "agentskills.io", "created_at": "2026-06-14T12:00:00Z",
+    "reference_summary": "a depth counter", "notes_for_evaluator": "",
 }
 
 
@@ -82,34 +119,42 @@ class EndToEnd(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.d, ignore_errors=True)
 
-    def test_full_pipeline_break_code(self):
+    def test_full_problem_first_pipeline(self):
         # 1. carve plan gate
         gate = validate_carve.validate(self.repo, CARVE_PLAN)
         self.assertTrue(gate["ok"], gate["reasons"])
 
-        # 2. carve -> correct/
+        # 2. carve -> correct/ (the solution world)
         cv = carve.carve(self.repo, CARVE_PLAN, self.correct)
         self.assertTrue(cv["ok"], cv)
-        self.assertTrue(os.path.isfile(os.path.join(self.correct, "src/nesting.py")))
+        self.assertTrue(os.path.isfile(os.path.join(self.correct, "nesting.py")))
 
         # 3. scrub the slice -> clean
         findings, _ = scrub.scan_paths(self.correct)
         self.assertEqual(findings, [])
 
-        # 4. taskify (break_code) -> task/
+        # 4. taskify -> task/ (problem world) + sibling hidden/
         tf = taskify.taskify(self.correct, TASK_PLAN, self.task)
         self.assertTrue(tf["ok"], tf.get("error"))
-        self.assertIn("depth -= 1", open(os.path.join(self.task, "src/nesting.py")).read())
-        self.assertIn("depth += 1", tf["reference_diff"])  # the fix the candidate should reach
+        with open(os.path.join(self.task, "nesting.py")) as fh:
+            self.assertIn("NotImplementedError", fh.read())
+        self.assertFalse(os.path.isfile(os.path.join(self.task, "tests", "test_nesting.py")))   # team test stripped
+        self.assertTrue(os.path.isfile(os.path.join(self.task, "tests", "test_example.py")))    # example shipped
+        hidden = tf["hidden_tests_dir"]
+        self.assertTrue(os.path.isfile(os.path.join(hidden, "core", "test_core.py")))           # hidden withheld
+        self.assertFalse(hidden.startswith(os.path.abspath(self.task) + os.sep))
+        self.assertIn("return best", tf["reference_exemplar"])   # exemplar restores the real solution
 
-        # 5. offline validation (container) — correct green, task red
+        # 5. offline validation (container) — correct green, task builds, core RED-by-assertion on task
         validate_report = None
         if DOCKER:
-            validate_report = validate.validate("break_code", TEST_CMD, None, self.correct, self.task,
-                                                "python:3.11-slim", "docker")
+            validate_report = validate.validate(TEST_CMD, None, self.correct, self.task, "python:3.11-slim",
+                                                "docker", hidden_dir=hidden, hidden_test_cmd=HIDDEN_CMD)
             self.assertTrue(validate_report["ok"], validate_report.get("reasons"))
             self.assertTrue(validate_report["correct_passed"])
-            self.assertFalse(validate_report["task_passed"])
+            self.assertTrue(validate_report["task_builds"])       # cross-file stub keeps it building
+            self.assertTrue(validate_report["correct_core_passed"])
+            self.assertTrue(validate_report["task_core_failed"])
 
         # 6. package -> bundle.zip
         sc = package.assemble_scorecard(tf, CARVE_PLAN["source"], validate_report, META)
@@ -123,15 +168,17 @@ class EndToEnd(unittest.TestCase):
             names = z.namelist()
             self.assertIn("scorecard.json", names)
             self.assertIn("manifest.json", names)
-            # note: BRIEF.md is authored by the agent in Phase 6, not by the scripts, so it's absent here
-            self.assertTrue(any(n.startswith("task/src/nesting.py") for n in names))
-            self.assertFalse(any("scorecard" in n and n.startswith("task/") for n in names))
+            self.assertIn("task/tests/test_example.py", names)                       # example shipped
+            self.assertFalse(any("test_core" in n and n.startswith("task/") for n in names))  # hidden NOT shipped
+            self.assertTrue(any(n.startswith("task/nesting.py") for n in names))
             card = json.loads(z.read("scorecard.json"))
-        self.assertEqual(card["task_mode"], "fix_and_extend")
-        self.assertEqual(card["extension"]["description"], TASK_PLAN["extension"]["description"])
-        self.assertEqual(card["source"]["pr"]["number"], 7)
-        self.assertEqual(card["created_by"]["operator"], "Oskar")
-        self.assertIn("depth += 1", card["reference_solution"]["diff"])
+            man_loaded = json.loads(z.read("manifest.json"))
+        self.assertEqual(card["schema_version"], "2")
+        self.assertNotIn("task_mode", man_loaded)                                    # receiver can't branch on it
+        self.assertIn("test_core.py", [t["path"] for t in card["behavior_suite"]["core"]])
+        self.assertIn("return best", card["reference_exemplar"]["diff"])
+        self.assertEqual(card["pr_suitability"]["verdict"], "recommend")
+        self.assertEqual(card["source"]["pr"]["number"], 5)
 
     def test_planted_secret_blocks_bundle(self):
         carve.carve(self.repo, CARVE_PLAN, self.correct)
@@ -146,10 +193,10 @@ class EndToEnd(unittest.TestCase):
         self.assertFalse(os.path.exists(out))
 
     def test_over_cap_carve_rejected(self):
-        big = dict(CARVE_PLAN, files=[f"src/f{i}.py" for i in range(validate_carve.MAX_FILES + 1)])
+        big = dict(CARVE_PLAN, files=[f"f{i}.py" for i in range(validate_carve.MAX_FILES + 1)])
         for f in big["files"]:
             p = os.path.join(self.repo, f)
-            os.makedirs(os.path.dirname(p), exist_ok=True)
+            os.makedirs(os.path.dirname(p), exist_ok=True) if os.path.dirname(f) else None
             open(p, "w").close()
         gate = validate_carve.validate(self.repo, big)
         self.assertFalse(gate["ok"])
