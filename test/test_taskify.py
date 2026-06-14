@@ -82,6 +82,25 @@ class FreeFormSpec(unittest.TestCase):
             self.assertIn("extend", res["task_mode"])
 
 
+class Symlinks(unittest.TestCase):
+    def test_vendored_symlinks_preserved_in_task(self):
+        # node_modules/.bin/* are relative symlinks; copytree must preserve them (symlinks=True) or
+        # self-resolving CLIs like vitest break in task/. Proven without Docker via islink.
+        with tempfile.TemporaryDirectory() as d:
+            correct = _correct(d)
+            binp = os.path.join(correct, "node_modules", ".bin")
+            os.makedirs(binp)
+            os.makedirs(os.path.join(correct, "node_modules", "vitest"))
+            with open(os.path.join(correct, "node_modules", "vitest", "cli.js"), "w") as fh:
+                fh.write("// cli\n")
+            os.symlink("../vitest/cli.js", os.path.join(binp, "vitest"))  # relative, like npm
+            res = taskify.taskify(correct, {"mutations": [_BUG]}, os.path.join(d, "task"))
+            self.assertTrue(res["ok"], res.get("error"))
+            link = os.path.join(d, "task", "node_modules", ".bin", "vitest")
+            self.assertTrue(os.path.islink(link), "vendored symlink was dereferenced (vitest would break)")
+            self.assertEqual(os.readlink(link), "../vitest/cli.js")
+
+
 class Guards(unittest.TestCase):
     def test_missing_find_fails(self):
         with tempfile.TemporaryDirectory() as d:

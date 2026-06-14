@@ -79,9 +79,11 @@ def run_with_hidden(runtime: str, image: str, base_dir: str, hidden_tier_dir: st
     tmp = tempfile.mkdtemp(prefix="taskforge-validate-")
     try:
         work = os.path.join(tmp, "work")
-        shutil.copytree(base_dir, work)
+        # symlinks=True: vendored node_modules/.bin/* are relative symlinks; dereferencing them
+        # breaks self-resolving CLIs like vitest (.bin/vitest -> ../vitest/...) in the copy.
+        shutil.copytree(base_dir, work, symlinks=True)
         if os.path.isdir(hidden_tier_dir):
-            shutil.copytree(hidden_tier_dir, os.path.join(work, "_hidden"))
+            shutil.copytree(hidden_tier_dir, os.path.join(work, "_hidden"), symlinks=True)
         return run_offline(runtime, image, work, hidden_test_cmd, build_cmd)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

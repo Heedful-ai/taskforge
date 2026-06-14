@@ -121,7 +121,9 @@ def _write_tests(specs: list, dest_root: str, guard_not_under: str) -> tuple[lis
 def taskify(correct_dir: str, plan: dict, out_dir: str) -> dict:
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
-    shutil.copytree(correct_dir, out_dir)
+    # symlinks=True: preserve vendored node_modules/.bin/* relative symlinks (else self-resolving
+    # CLIs like vitest break in task/ exactly as they would in validate's composed tree).
+    shutil.copytree(correct_dir, out_dir, symlinks=True)
 
     mutations_in = plan.get("mutations", []) or []
     strip_paths = plan.get("strip_paths", []) or []
