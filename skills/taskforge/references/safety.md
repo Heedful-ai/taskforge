@@ -20,7 +20,7 @@ itself. Any real finding → STOP. Exit code `2`.
 - the carved slice **and** the post-vendor `task/` (a secret in a vendored package config must not ship);
 - the candidate `BRIEF.md` (`--brief`);
 - the **`gh`-fetched issue/PR text** (`--text issue=FILE`) — issue bodies routinely carry pasted tokens;
-- the assembled **`scorecard.json` prose fields** (re-scanned at packaging — `scripts/package.py` does this).
+- the assembled **bundle prose** — `EVALUATION.md` + `context.json` (re-scanned at packaging — `scripts/package.py` does this).
 
 Binaries inside dependency dirs are ignored; a binary sitting in the candidate *source* is surfaced
 as a warning (`warnings[]`) so it's never silently shipped — review it before continuing.

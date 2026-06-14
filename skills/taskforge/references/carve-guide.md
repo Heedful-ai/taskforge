@@ -9,8 +9,8 @@ From the issue/PR the user gave you, gather — using **read-only** `gh` calls o
 - the issue: `gh issue view <n> --json number,title,body,url`
 - the PR (if any): `gh pr view <n> --json number,title,body,url` and its diff: `gh pr diff <n>`
 
-Keep this for the scorecard's `source` block (the original PR diff/description + issue are evaluation
-context — they are NOT shown to the candidate). Never run `gh` commands that write.
+Keep this for `context.json`'s `source` block (the original PR diff/description + issue are evaluation
+context — they are NOT shipped in `task/`). Never run `gh` commands that write.
 
 ## 2. Choose a coherent, bounded slice
 Pick the module/feature the issue is about, plus only what it needs to build and run its tests. Stay
@@ -59,7 +59,7 @@ The MVP ships and proves one language end-to-end; others are appended without ch
   2. **What they'll receive** — the carved file list (candidate-visible files; note `node_modules`/
      deps are vendored but omitted from the listing).
   3. **Safety** — what you checked (no secrets/PII, no proprietary branding/data, monorepo coupling
-     stubbed out), and that the full PR diff lives only in the trusted scorecard, never candidate-facing.
+     stubbed out), and that the full PR diff lives only in `context.json`/`evaluation/`, never in `task/`.
   Ask the user to confirm **two** things: *is this the right task?* and *is the slice OK to share
   (nothing proprietary/sensitive)?* Don't proceed on file approval alone.
 - Run `scripts/carve.py <repo> carve_plan.json --out correct`. It copies the slice (no `.git`), runs

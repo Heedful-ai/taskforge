@@ -2,8 +2,8 @@
 
 An installable **AI Agent Skill** that turns one of your real merged GitHub PRs into a
 bounded, self-contained **candidate coding task** — problem-first, so a senior candidate must
-design and justify a solution, not transcribe one — plus a trusted scorecard for the people
-evaluating the result.
+design and justify a solution, not transcribe one — plus a grading guide for whoever
+evaluates the result.
 
 You run it inside your own coding agent (Claude Code, Codex, …). Working with you, it:
 
@@ -12,10 +12,11 @@ You run it inside your own coding agent (Claude Code, Codex, …). Working with 
 3. carves the relevant code into a standalone, runnable project,
 4. proves that project builds + tests **offline**,
 5. turns it into a **problem the candidate must design and solve** — it presents the problem +
-   worked scenarios (never the solution), grades behaviour with a **hidden test suite**, and asks
-   for a `NOTES.md` explaining their approach and where the AI was wrong,
-6. writes a candidate-facing `BRIEF.md`,
-7. packages a `task-bundle.zip` you hand off for evaluation.
+   worked scenarios (never the solution) and asks for a `NOTES.md` explaining their approach and
+   where the AI was wrong,
+6. writes a candidate-facing `BRIEF.md` and a grading guide (`EVALUATION.md`),
+7. packages a `task-bundle.zip` — hand the candidate `task/` and grade by hand, or send it to a
+   platform for automated grading.
 
 It is **fail-closed**: it refuses auth/crypto/payment tasks and never ships a detected secret.
 
@@ -45,14 +46,14 @@ missing.
 
 ```
 task-bundle.zip
-├── task/                 # the candidate project + BRIEF.md (this is what they receive)
-├── scorecard.json        # trusted evaluation record — never give this to the candidate
-└── manifest.json         # language, build/test commands, sizes, checksums, versions
+├── task/                  # the candidate exercise + BRIEF.md (this is what they receive)
+├── EVALUATION.md          # grading guide — readable by a human or an eval agent
+├── evaluation/reference/  # the team's solution (one acceptable approach)
+└── context.json           # metadata: who made it, source PR, role, run commands
 ```
 
-The evaluating side reads `scorecard.json` + `manifest.json` and mounts only `task/`. See
-[docs/jelly-handoff.md](docs/jelly-handoff.md) for the receiving-side contract and required
-pre-mount checks.
+Hand the candidate `task/` and grade with `EVALUATION.md`, or send the whole bundle to a platform for
+automated grading. See [docs/jelly-handoff.md](docs/jelly-handoff.md) for the automated-ingest contract.
 
 ## Development
 

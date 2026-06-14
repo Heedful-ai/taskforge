@@ -70,7 +70,7 @@ surface task varies. Suggested anchors:
 - **mid** = one clear core build + a planted bug or two + a bounded extend; design space narrower.
 - **junior** = a guided core with a clear contract + a bug to find; minimal open design.
 
-Record which anchors a task was calibrated to in the scorecard's descriptive `task_mode` string, so the
+Record which anchors a task was calibrated to in `context.json`'s descriptive `task_mode` string, so the
 evaluator knows **what bar this task represents**.
 
 ---
@@ -88,34 +88,33 @@ They will. Design for it instead of pretending otherwise.
   changed.** This artifact *is* the 2026 skill and cannot be produced without the judgment you're
   testing.
 - **Optionally seed a subtly-wrong starter** — a plausible-but-incorrect partial implementation (the
-  kind a model hallucinates confidently). Candidates who spot and correct it show genuine
-  comprehension; AI-only completions tend to reproduce or mis-"fix" it. Verify the catch via the hidden
-  suite.
+  kind a model hallucinates confidently). Candidates who spot and correct it show genuine comprehension;
+  AI-only completions tend to reproduce or mis-"fix" it.
 - **Depth beats breadth** — several independent sub-problems with real depth reduce the chance a single
   AI insight determines the outcome.
 
 ---
 
-## 5. Grade behaviour, hide the suite, ship only examples
+## 5. Tests, and how it gets graded — keep it simple
 
-- **Grade observable invariants/behaviour**, not similarity to the team's diff. There are many ways to
-  be a good engineer; a cleaner, different, correct solution should score **higher**, not be penalized.
-  The team's PR diff is **one reference exemplar**, never a similarity target.
-- **Keep the full grading suite hidden** (trusted-side). Shipping the grading tests spoils the task.
-- **Ship a few example tests** in `task/` for **contract clarity only** — they show the harness, how to
-  run, and the I/O shape. They must **not** assert the key behavioural invariants, or a candidate can
-  reverse-engineer the hidden suite and you've spoiled the design space.
-- **Author the hidden suite from the BRIEF's worked scenarios** — the invariant the candidate was
-  *given* — not from the team's specific implementation. A suite that encodes the team's particular
-  choice will mark a defensibly-different correct solution wrong (the exact grading sin we're avoiding).
-  When you package, a human reviews the suite asking: *does this assert the invariant, or the team's
-  implementation?*
-- **Tier the suite** into `core` (expected-pass — the make-it-work invariants) and `stretch`
-  (informative — extend/scale/edge). Because the task is deliberately bigger than finishable (§2),
-  grading is **not** "did the whole suite go green": it's core-pass + how far into stretch + the human
-  rubric on design and `NOTES.md`.
-- **Open design dimension → human rubric** with multiple acceptable approaches; automated tests alone
-  can't judge whether a different architecture is equally valid.
+There are **no "hidden tests."** You can't test code that isn't written yet, and a test written against
+an interface you told the candidate to design themselves won't even run against their code. So:
+
+- **Fix task** — there's existing code with a bug, and the test that catches it. **Both ship in
+  `task/`.** The candidate makes the test pass. The test is visible — it *is* the task.
+- **Build task** — the candidate designs and writes something that doesn't exist yet. **Ship no tests
+  for it** (strip the team's tests for that part — `strip_paths`). They build against the problem +
+  worked scenarios; you grade the **result**.
+
+Grading uses the **answer key** the skill produces (`EVALUATION.md` + `evaluation/reference/`):
+- **Grade behaviour/judgment**, not similarity to the team's solution. There are many ways to be a good
+  engineer; a cleaner, different, correct solution scores **higher**. The team's solution in
+  `evaluation/reference/` is **one** acceptable approach, never a target.
+- **Author a clear rubric** (`human_rubric`: the design dimensions, the acceptable approaches, what good
+  looks like) and **NOTES expectations** (`notes_evaluation`). That's what a human grader reads and what
+  jelly's eval agent is fed — the skill just generates it; it doesn't run grading.
+- The task is deliberately **bigger than finishable** (§2), so don't grade "did everything get done" —
+  grade the core result + how far they got + the design reasoning in `NOTES.md`.
 
 ---
 
@@ -134,15 +133,21 @@ support a hiring conversation, not to replace it.
 Compose freely from these; a task uses whichever fit the PR:
 
 - **Stub-the-solution build** — gut the PR's solution back to a *pre-solution world* (signature-
-  preserving stubs/TODOs) so the candidate builds it from the problem. (Mechanics: `references/
-  carve-guide.md` + the taskify spec.)
-- **Planted bug(s)** — one or two realistic defects in the interesting logic for them to find and fix.
-- **Extend / scale ask** — a forward-looking "now also handle X" (often human-graded).
+  preserving, still-compiling stubs/TODOs) so the candidate builds it from the problem. Strip the team's
+  tests for that part — there are no tests for code that isn't written yet.
+- **Planted bug(s)** — one or two realistic defects in the interesting logic, with the test that catches
+  them left in `task/` (the test is the task).
+- **Extend / scale ask** — a forward-looking "now also handle X" (human-graded).
 - **Seeded-wrong starter** — §4, optional.
-- **Example tests** (ship, mechanics-only) vs **hidden suite** (withhold, `core`/`stretch`).
 
-These are recorded in the task spec the scripts apply (`taskify`), but **how you combine them is your
-design call**, grounded in §1–§6 — there is no controlling mode.
+**Don't let the scaffolding name the architecture.** For a senior *design* task, the stubs/types you
+leave must NOT pre-encode the solution. If you leave `claimJob() / completeJob() / resetStaleJobs()`
+stubs to fill in, you've already chosen a polling-queue design — the candidate can't "choose the
+approach" the BRIEF asked for. Leave the **types + an entry point + the problem**, not the full named
+operation set. (Naming the solution in the starter code is the same leak as naming it in the BRIEF.)
+
+These are recorded in the task spec `taskify` applies, but **how you combine them is your design call**,
+grounded in §1–§6 — there is no controlling mode.
 
 ---
 
@@ -159,6 +164,6 @@ entries, keep a fast current view) on top of a mutable `entries` table.
   current + historical views. Design and implement a model that supports this; then handle two
   concurrent edits to the same entry. In NOTES.md, explain your approach and the alternatives you
   considered and rejected."* → the candidate chooses append-only log vs snapshots vs temporal table vs
-  audit trail and justifies it. **Senior signal.** We grade behaviour (reconstruct past versions +
-  current view + recover deletes) via the hidden `core` suite; concurrency is `stretch`/human-graded;
-  the team's append-only diff is one reference exemplar, not the required answer.
+  audit trail and justifies it. **Senior signal.** Since they design it, we ship **no tests** for it —
+  we grade the result against the scenarios + the rubric + their NOTES, with the team's append-only
+  solution in `evaluation/reference/` as one acceptable approach, not the required answer.

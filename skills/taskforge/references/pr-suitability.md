@@ -36,8 +36,9 @@ worth proposing.
   caching, state machines), not glue/UI wiring or config. `score_pr.py` counts source vs test/config
   files; zero source → hard refuse.
 - **Observable correctness contract (must-have).** Can you state "done" *behaviourally* and write 3–5
-  invariant/example tests a correct solution must pass? If you can't, you can't grade it and you'll fall
-  into the hidden-oracle trap. Pure refactors/style/comment PRs fail here.
+  invariant/example tests a correct solution must pass (for a fix task), or describe "done" clearly
+  enough to grade a build by hand? If you can't, you can't grade it objectively. Pure refactors/style/
+  comment PRs fail here.
 - **AI-resistance.** Is it more than one-shottable from a one-paragraph description? Generic tasks
   (implement a queue, a REST endpoint) are trivially produced by a model. A specialized domain with an
   unusual constraint (a custom ordering invariant, a non-obvious concurrency model) is naturally more
@@ -52,7 +53,7 @@ worth proposing.
 ## Output
 
 A short **recommend / flag / refuse** per PR, with the criterion-level reasons, recorded into the
-scorecard's `pr_suitability.reasons[]`. Surface these when you propose the 2–4 PR options (intake) so
+`context.json`'s `pr_suitability.reasons[]`. Surface these when you propose the 2–4 PR options (intake) so
 the choice is grounded, not hopeful.
 
 ## The contrarian tension (resolve it, don't ignore it)

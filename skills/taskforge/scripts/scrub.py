@@ -7,7 +7,7 @@ Two gates, ported from jelly's by-hand task prep:
   2. Secret / PII scan — a built-in regex scan (always on), augmented by `gitleaks` when present.
 
 Every path content can reach a candidate bundle by must be scanned: the carved slice, the
-`gh`-fetched issue/PR text, and the assembled scorecard's prose fields. So this module scans both
+`gh`-fetched issue/PR text, and the assembled bundle prose (EVALUATION.md + context.json). So it scans both
 files (`scan_paths`) and arbitrary strings (`scan_text`). Any finding → the caller must abort with
 no artifacts. Matches are redacted in output so findings can be logged safely.
 
@@ -72,7 +72,7 @@ def redact(match: str) -> str:
 
 
 def scan_text(label: str, content: str) -> list[Finding]:
-    """Scan an arbitrary string (issue body, scorecard prose, a file's content)."""
+    """Scan an arbitrary string (issue body, bundle prose, a file's content)."""
     out: list[Finding] = []
     for i, line in enumerate(content.split("\n"), start=1):
         for kind, rule, rx in RULES:
@@ -93,7 +93,7 @@ _EMAIL_RULE = next(rx for kind, rule, rx in RULES if rule == "email")
 
 def redact_pii(text: str) -> tuple[str, int]:
     """Rewrite PII (emails) to a redacted token, leaving placeholder domains intact. For TRUSTED,
-    non-candidate-facing fields (the scorecard's git-provenance prose) where a committer email is
+    non-candidate-facing fields (context.json's git-provenance prose) where a committer email is
     normal metadata, not a leak — redaction beats a false-positive hard-fail. Secrets are NOT handled
     here; those still hard-fail wherever they appear."""
     count = 0

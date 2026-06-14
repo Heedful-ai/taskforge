@@ -1,41 +1,40 @@
 ---
 name: taskforge
 description: >-
-  Build a bounded, self-contained candidate coding task (and a trusted evaluation scorecard) from
-  one of the user's real GitHub pull requests. Use this whenever the user wants to create, prepare,
-  or generate an interview / take-home / candidate coding task, hiring task, or evaluation task from
-  their repo or a PR. Collaborative and fail-closed: it scores the PR's suitability, carves a
-  standalone runnable project, and turns it into a PROBLEM the candidate must design and solve
-  (problem-first, not a spec to transcribe) — with hidden behaviour grading, an offline solvability
-  proof, and a packaged task-bundle.zip.
+  Build a bounded, self-contained candidate coding take-home from one of the user's real GitHub pull
+  requests, plus a grading guide. Use this whenever the user wants to create, prepare, or generate an
+  interview / take-home / candidate coding task, hiring task, or evaluation task from their repo or a
+  PR. Collaborative and fail-closed: it scores the PR's suitability, carves a standalone runnable
+  project, and turns it into a PROBLEM the candidate must design and solve (problem-first, not a spec
+  to transcribe), verified to run offline, and packages a task-bundle.zip.
 license: MIT
 compatibility: Requires git, gh (authenticated), python3 (>=3.9), zip, and a container runtime (docker or podman).
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
   spec: agentskills.io
   homepage: https://github.com/taskforge/taskforge
 ---
 
 # taskforge — build a candidate coding task from a real PR
 
-Turn one real GitHub PR into a bounded (~1–2h) **candidate coding task** plus a **trusted scorecard**,
+Turn one real GitHub PR into a bounded (~1–2h) **candidate coding take-home** plus a **grading guide**,
 packaged as `task-bundle.zip`. The task **presents a problem and asks the candidate to design and solve
 it** — it does NOT hand them the solution. Run this collaboratively. **Deterministic bundled scripts do
 the fragile and safety-critical work — run them; do not reimplement their logic.** You (the agent)
 design the *task* — grounded in `references/task-design.md`, not a fixed formula.
 
-> **What you produce.** A self-contained take-home generated from a PR, plus an answer key
-> (`scorecard.json` — hidden tests, reference solution, rubric). It's **dual-use**: the user can hand
-> the task to a candidate and grade it themselves with the answer key, **or** send the whole bundle to
-> **jelly** for automated grading. Your job is just to generate a good task + a correct answer key.
-> Don't editorialize about grading, don't emit a "how to grade" walkthrough, don't generate a grading
-> script — producing the bundle is the whole job.
+> **What you produce.** A self-contained take-home in `task/`, a grading guide (`EVALUATION.md` +
+> `evaluation/reference/`), and app metadata (`context.json`). It's **dual-use**: the user can hand the
+> candidate `task/` and grade by hand with `EVALUATION.md`, **or** send the whole bundle to **jelly**
+> for automated grading. Your job is just to generate a good task + a clear grading guide. Don't
+> editorialize about grading, don't emit a "how to grade" walkthrough, don't generate a grading script
+> — producing the bundle is the whole job.
 
 **Output location:** ask the user where to write output, **defaulting to the current directory**. Do
 the work in a subdir there (e.g. `./taskforge-<repo>-pr<N>/`) and leave the final `task-bundle.zip` in
 that location. **Never use `/tmp`** — the user should be able to find what you made. Paths below are
 relative to the skill root for scripts/refs, and to that working subdir for artifacts (`correct/`,
-`task/`, `hidden/`, `*.json`, the zip).
+`task/`, `*.json`, the zip).
 
 **Copy this checklist into your reply and tick each phase. Never pass a STOP gate without the user.**
 
@@ -46,7 +45,7 @@ relative to the skill root for scripts/refs, and to that working subdir for arti
 - [ ] Phase 4 — Validate standalone
 - [ ] Phase 4b — Scrub (fail-closed)
 - [ ] Phase 5 — Taskify (design the spec; STOP: approve difficulty)
-- [ ] Phase 6 — Re-validate (hidden-suite solvability)
+- [ ] Phase 6 — Re-validate (offline)
 - [ ] Phase 7 — Brief (STOP: approve — no spoilers)
 - [ ] Phase 8 — Package & hand off
 
@@ -74,8 +73,8 @@ role. Don't interrogate them about language/stack — infer it. See `references/
 
 ## Phase 2 — Propose problem-first task options & confirm (+ hiring metadata)
 1. With **read-only** `gh` calls, fetch the PR and its linked issue (`gh pr view <n> --json
-   number,title,body,url`, `gh pr diff <n>`, the issue if referenced). Keep these for the scorecard
-   `source` block. Note: the PR diff is an **authoring aid** — never shown to the candidate.
+   number,title,body,url`, `gh pr diff <n>`, the issue if referenced). Keep these for `context.json`'s
+   `source` block. Note: the PR diff is an **authoring aid** — never shipped in `task/`.
 2. **Propose task OPTIONS in plain language — a menu, not one answer.** Ground them in
    `references/task-design.md`. Each option presents a **problem the PR solved** (the pre-solution
    world + what's needed), at the altitude the role needs, and is **time-filling**: typically a build-it
@@ -84,14 +83,14 @@ role. Don't interrogate them about language/stack — infer it. See `references/
    auditable and recoverable"). Cover genuinely different parts of the PR. Give skills + rough
    difficulty. **STOP — let the user pick / combine / adjust.** Choose by **substance, not ease of
    testing** (offline = `--network=none`, NOT no-mocks — mock a DB/API client and carve the meaty logic).
-3. **Collect hiring metadata** (for the scorecard, never candidate-facing): **position**, **seniority**
+3. **Collect hiring metadata** (for `context.json`, app-side only): **position**, **seniority**
    (drives task altitude), **job description** (paste/URL, optional), **time target** (~1–2h), operator
    name. Also record your **suitability verdict + reasons** for `pr_suitability`.
 Carry all of this into `meta.json` at Phase 8.
 
 ## Phase 3 — Carve
 Follow `references/carve-guide.md`. Carve the **solution world** (`correct/`) — the PR's merged state,
-the "answer" the hidden suite will verify.
+the working reference the candidate's result is judged against.
 1. Write `carve_plan.json` (files, language, build/test commands, vendor strategy, captured `source`).
 2. Run `python3 scripts/validate_carve.py <repo> carve_plan.json`. Fix any rejection.
 3. **STOP — slice approval. Show the TASK, not just files.** Present (a) a short **draft of the
@@ -114,54 +113,55 @@ See `references/safety.md`.
 
 ## Phase 5 — Taskify — design the spec
 Design the task per `references/task-design.md`, then express it as `task_plan.json` and run
-`python3 scripts/taskify.py correct task_plan.json --out task`. The spec is **free-form** (no mode
-enum); compose what the task needs:
+`python3 scripts/taskify.py correct task_plan.json --out task`. There are **no hidden tests** — you
+can't test code that isn't written yet. Compose what the task needs:
 - `mutations` — `kind:"stub"` gutters the solution to a **signature-preserving, still-compiling** TODO
-  (the build-it part; gut schema/fixtures too if referenced); `kind:"bug"` plants a defect to fix.
-- `strip_paths` — remove the team's own tests (they'd spoil and break the build proof).
-- `example_tests` — `[{path,content}]` shipped in `task/`, **mechanics-only** (harness/IO shape, never
-  the invariants).
-- `hidden_tests` — `{core:[…], stretch:[…]}` authored **from the BRIEF's worked scenarios** (the
-  invariant, not the team's implementation); withheld to a sibling `hidden/`.
-- optional `extension`/`scale` (human-graded), `seeded_failure`, `human_rubric`, `notes_evaluation`, and
-  a descriptive `task_mode` string carrying the calibration anchors.
+  (the build-it part — leave types + an entry point, NOT the named solution operations); `kind:"bug"`
+  plants a defect, and the test that catches it stays in `task/` (the test is the task).
+- `strip_paths` — for a build part, remove the team's tests for it (no tests for unwritten code).
+- optional `extension`/`scale`, `seeded_failure`, `reference_summary`, `human_rubric`,
+  `notes_evaluation`, a descriptive `task_mode` string.
 
-taskify writes `task/` (problem world + example tests), the sibling `hidden/` suite, the
-`reference_exemplar`, and `taskify_result.json`. **STOP — confirm difficulty in plain terms** (e.g.
-"~Xh: design the history model, fix a bug, then handle concurrency") and get agreement.
+taskify writes `task/` (the exercise), records `reference_files` (the team's answer, which lives at
+`correct/<file>`), and writes `taskify_result.json`. **STOP — confirm difficulty in plain terms** (e.g.
+"~1.5h: design the history model + fix one bug") and get agreement.
 
-## Phase 6 — Re-validate (solvability, offline)
-Run `python3 scripts/validate.py --test "<test_command>" --hidden hidden --hidden-test
-"<hidden_test_command>" [--build ...] --language <lang> --correct correct --task task --json >
-validate_report.json`. It proves offline: `correct/` green; `task/` builds + example tests green
-(RED-for-right-reason); hidden `core` GREEN on `correct/` and RED on `task/`. If it rejects (e.g. the
-stub broke the build, or the suite over-fits), return to Phase 5.
+## Phase 6 — Re-validate (offline)
+Run `python3 scripts/validate.py --test "<test_command>" [--build ...] --language <lang> --correct
+correct --task task [--task-red] --json > validate_report.json`. It proves offline: `correct/` is green
+(the reference solution works, slice is standalone); and `task/` is in the right starting state — for a
+**fix** task add `--task-red` (the bug must make the shipped test fail); for a **build** task the stub
+must still build/run. If it rejects, return to Phase 5.
 
 ## Phase 7 — Brief
 Write `task/BRIEF.md` from `references/readme-template.md`: state the **problem + constraints + worked
-scenarios**, never the solution; require `NOTES.md`. **STOP — show the brief and get approval.** The
-no-spoiler check covers: no solution/bug-location/hidden-checks; **example tests are mechanics-only**
-(don't reveal invariants); and confirm the **hidden suite asserts the invariant, not the team's
-specific implementation** (a different correct solution must pass it).
+scenarios**, never the solution; require `NOTES.md`. **No "offline / no internet" language** — that's
+our eval sandbox, not the candidate's concern. **STOP — show the brief and get approval.** No-spoiler
+check: no solution, no bug location, no source-PR text; a build part ships no tests, a fix part ships
+its failing test.
 
 ## Phase 8 — Package & hand off
-Assemble `meta.json`:
-- `task_id`, `language`, `build_command`, `test_command`, **`hidden_test_command`**;
-- `hiring`: `{ position, seniority, job_description, time_target_hours }`;
-- `assessment`: `{ problem_summary, test_focus, skills_assessed }`;
-- **`pr_suitability`**: `{ verdict, reasons }`; optional `grading.partial_credit`;
-- `created_by`, `skill_version`, `spec_version`, `created_at` (real clock), optional `reference_summary`,
-  `notes_for_evaluator`.
-Then run `python3 scripts/package.py --task task --taskify taskify_result.json --source
-source_context.json --validate validate_report.json --meta meta.json --out task-bundle.zip`. It embeds
-the hidden suite + rubric into `scorecard.json` (trusted sibling), re-scrubs all prose (fail-closed),
-and asserts the layout (hidden suite never under `task/`).
+Assemble `meta.json` (derive `created_by.operator` from `git config user.name` / `gh api user` — don't
+ask the user):
+- `task_id`, `language`, `build_command`, `test_command`;
+- `summary` (a line on what you and the user decided), `hiring` `{position, seniority, job_description,
+  time_target_hours}`, `assessment` `{problem_summary, test_focus, skills_assessed}`,
+  `pr_suitability` `{verdict, reasons}`;
+- `created_by`, `skill_version`, `spec_version`, `created_at` (real clock).
+Then run `python3 scripts/package.py --task task --correct correct --taskify taskify_result.json
+--source source_context.json --meta meta.json --out task-bundle.zip`. It builds the bundle, scrubs the
+prose (fail-closed on secrets), and excludes `node_modules`/vendored deps.
 
-**Hand off.** Tell the user where `task-bundle.zip` is and, in one line, what's inside: `task/` is the
-candidate-facing exercise (this is what you'd send a candidate); `scorecard.json` is the answer key
-(reference solution + hidden tests + rubric) — grade with it yourself, or send the whole bundle to jelly
-for automated grading. One practical heads-up: if you send the task to a candidate, send them `task/`,
-not the scorecard. Then stop — no grading walkthrough.
+The bundle is:
+```
+task/                    the exercise (BRIEF + source + lockfile; no node_modules)
+EVALUATION.md            human + AI readable grading guide
+evaluation/reference/    the team's solution for the files the candidate builds/fixes
+context.json             app metadata (who, which PR, discussion summary, role)
+```
+**Hand off.** Tell the user where `task-bundle.zip` is, one line on what's inside (above), and that it's
+dual-use: hand the candidate `task/` and grade with `EVALUATION.md` + `evaluation/`, or send the whole
+bundle to jelly for automated grading. Then stop — don't emit a grading walkthrough.
 
 ---
 
@@ -171,5 +171,5 @@ not the scorecard. Then stop — no grading walkthrough.
 - `references/task-design.md` — **how to design a problem-first, time-filling, seniority-appropriate task**
 - `references/carve-guide.md` — carving a bounded standalone slice + per-language defaults
 - `references/readme-template.md` — the candidate `BRIEF.md` template (+ required NOTES.md)
-- `references/scorecard-schema.md` — the trusted `scorecard.json` contract (schema v2)
+- `references/bundle-contract.md` — what the `task-bundle.zip` contains
 - `references/safety.md` — the gates and the fail-closed rule

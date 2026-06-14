@@ -5,7 +5,7 @@ Runs AFTER validate_carve.py passes AND the user approves the slice. It:
   1. copies each planned file into <out>/ (default ./correct), preserving relative paths, no .git;
   2. runs the plan's vendor_commands in <out>/ so dependencies resolve OFFLINE later (this runs on
      the user's machine, which HAS network now — the resulting tree is what must run offline);
-  3. writes source_context.json from the plan's captured PR/issue (folded into the scorecard by U7).
+  3. writes source_context.json from the plan's captured PR/issue (folded into context.json at packaging).
 
 Stdlib only. Usage: python3 carve.py <source_repo> <carve_plan.json> [--out DIR]
 Exit: 0 ok · 1 vendor command failed · 4 usage error.
@@ -49,7 +49,7 @@ def carve(source_root: str, plan: dict, out_dir: str) -> dict:
             return {"ok": False, "copied": copied, "vendor_log": vendor_log,
                     "error": f"vendor command failed: {cmd}"}
 
-    # capture source context for the scorecard (trusted-side; never enters task/)
+    # capture source context for context.json (evaluation-side; never enters task/)
     source_ctx = plan.get("source", {})
     ctx_path = os.path.join(os.path.dirname(os.path.abspath(out_dir)) or ".", "source_context.json")
     with open(ctx_path, "w", encoding="utf-8") as fh:

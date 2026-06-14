@@ -24,8 +24,8 @@ until they've picked one. Make proposals first — nothing else.
 - `gh pr diff <n>`
 - if the body references an issue (`Closes #123`), `gh issue view 123 --json number,title,body,url`
 
-Keep all of this for the scorecard `source` block. The diff is an **authoring aid** — never shown to
-the candidate.
+Keep all of this for `context.json`'s `source` block. The diff is an **authoring aid** — never shipped
+in `task/`.
 
 ## 3. Propose task OPTIONS — a menu, not one answer (problem-first)
 First, one line: **what the PR was about** + the **stack** (you inferred it; don't ask).
@@ -62,4 +62,5 @@ Once they've confirmed the task, gather:
 - **operator** — their name (for `created_by`).
 
 Also record your **suitability verdict + reasons** (`pr_suitability`). Keep all of this for `meta.json`
-→ the scorecard's `hiring` + `assessment` + `pr_suitability` + `created_by` blocks.
+→ `context.json`'s `hiring` + `assessment` + `pr_suitability` + `created_by` blocks. (Derive the
+operator name from `git config user.name` / `gh api user` — don't ask the user for it.)

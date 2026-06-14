@@ -31,9 +31,10 @@ shows …; X can be recovered as …">
 <Compose the asks the task needs — examples:>
 - **Build it.** Implement a model/solution that satisfies the scenarios above. **You choose the
   approach** — there are several reasonable ones; pick one and justify it in NOTES.md. <senior: keep
-  this open; mid/junior: you may narrow the contract.>
-- **Fix what's broken.** <If there are planted bugs: "Some behaviour is wrong / tests are failing —
-  find and fix it." Describe the symptom, never the cause or location.>
+  this open; mid/junior: you may narrow the contract.> <No tests are provided for this — you decide how
+  to verify it.>
+- **Fix what's broken.** <If there are planted bugs: "A test is failing — find the bug and fix it."
+  Describe the symptom, never the cause or location. The failing test ships with the task.>
 - **Then extend / scale.** <A forward-looking harder part: a new requirement, concurrency, large
   inputs, recovery. State it as an outcome.>
 
@@ -49,15 +50,19 @@ Add a `NOTES.md` with:
 Using an AI assistant is expected and fine — we want your judgment about it.
 
 ## Running it
-- Install nothing — dependencies are included. **There is no internet access** beyond the AI assistant.
-- Run the example tests: `<test_command>` — they show the harness and the expected I/O shape. They are
-  not the full grade; passing them is a starting point, not "done".
-- <build step if any: `<build_command>`>
+- Install dependencies: `<install command, e.g. npm install>`.
+- <Run the tests: `<test_command>` — only if the task ships a test (a fix task does; a pure build task
+  doesn't).>
+- <build/run step if any: `<build_command>`>
 
 ## What we're looking for
 <1–2 lines on judgment, prioritization, clean code that fits the constraints, and clear reasoning in
-NOTES.md. Do NOT reveal the design, the bug, or the hidden checks.>
+NOTES.md. Do NOT reveal the design or the bug's location.>
 ```
+
+> **Do not mention the sandbox.** The candidate may run this anywhere with normal internet — don't write
+> "no internet access" or "runs offline" (that's *our* eval sandbox, not a task requirement, and it
+> reads as "build an offline-first app"). Just normal setup: install deps, run it.
 
 ## Altitude notes (from `hiring.seniority`)
 - **junior / mid** — you may keep the contract tighter and lean on "Fix what's broken" + a bounded
@@ -66,10 +71,8 @@ NOTES.md. Do NOT reveal the design, the bug, or the hidden checks.>
   extend/scale part with no single right answer.
 
 ## Checklist before you show it to the user
-- [ ] States the **problem + scenarios**, never the solution, its name, a bug location, or hidden checks.
+- [ ] States the **problem + scenarios**, never the solution, its name, or a bug's location.
 - [ ] No reference-diff content, no source-PR text.
-- [ ] **Example tests show mechanics only** — they do NOT assert the key behavioural invariants (those
-      stay in the hidden suite; example tests that reveal them spoil the task).
+- [ ] A **fix** task ships its failing test; a **build** task ships no tests for the part being built.
+- [ ] No "offline / no internet" language — that's the eval sandbox, not the candidate's concern.
 - [ ] Asks for `NOTES.md` and permits AI use.
-- [ ] The run/test command matches the offline-validated project; states the no-internet / deps-included
-      constraint.
