@@ -1,4 +1,4 @@
-"""Tests for taskify (U5) — combined fix+extend model."""
+"""Tests for taskify (U4) — free-form problem-first task spec (no mode enum)."""
 import os
 import sys
 import tempfile
@@ -9,80 +9,107 @@ import taskify  # noqa: E402
 
 
 def _correct(d):
-    """A tiny working project under <d>/correct."""
+    """A tiny working project under <d>/correct with a solution body and a team test."""
     root = os.path.join(d, "correct")
     os.makedirs(os.path.join(root, "src"))
-    with open(os.path.join(root, "src", "sum.py"), "w") as fh:
-        fh.write("def add(a, b):\n    return a + b\n")
+    os.makedirs(os.path.join(root, "tests"))
+    with open(os.path.join(root, "src", "history.py"), "w") as fh:
+        fh.write("def current_view(entries):\n    return [e for e in entries if not e['deleted']]\n")
+    with open(os.path.join(root, "tests", "test_team.py"), "w") as fh:
+        fh.write("# the team's own tests — would spoil if shipped\n")
     return root
 
 
-_BUG = {"file": "src/sum.py", "find": "a + b", "replace": "a - b", "note": "op"}
-_EXT = {"description": "Add a subtract() function.",
-        "acceptance_criteria": [{"id": "AC_EXT1", "description": "subtract works", "check": "manual", "weight": 1}]}
+_STUB = {"file": "src/history.py", "find": "    return [e for e in entries if not e['deleted']]",
+         "replace": "    raise NotImplementedError  # TODO: build the history model", "kind": "stub",
+         "note": "candidate builds the current view"}
+_BUG = {"file": "src/history.py", "find": "not e['deleted']", "replace": "e['deleted']", "kind": "bug",
+        "note": "inverted filter"}
+_EXAMPLE = {"path": "tests/example_test.py", "content": "# mechanics only: shows how to run\n"}
+_HIDDEN_CORE = {"path": "test_core.py", "content": "# core invariant: current view excludes deleted\n"}
+_HIDDEN_STRETCH = {"path": "test_scale.py", "content": "# stretch: concurrency\n"}
 
 
-class FixBugs(unittest.TestCase):
-    def test_applies_bug_and_makes_reference_diff(self):
+class FreeFormSpec(unittest.TestCase):
+    def test_combined_stub_bug_example_hidden(self):
         with tempfile.TemporaryDirectory() as d:
             correct = _correct(d)
-            res = taskify.taskify(correct, {"mutations": [_BUG], "what_to_test": ["op"]}, os.path.join(d, "task"))
+            plan = {
+                "task_mode": "design+fix+extend (senior)",
+                "mutations": [_STUB],
+                "strip_paths": ["tests/test_team.py"],
+                "example_tests": [_EXAMPLE],
+                "hidden_tests": {"core": [_HIDDEN_CORE], "stretch": [_HIDDEN_STRETCH]},
+                "extension": {"description": "support reverting to version N", "acceptance_criteria": []},
+                "human_rubric": [{"dimension": "model choice", "acceptable_approaches": ["append-only", "snapshots"],
+                                  "what_good_looks_like": "justified trade-off"}],
+            }
+            task = os.path.join(d, "task")
+            res = taskify.taskify(correct, plan, task)
             self.assertTrue(res["ok"], res.get("error"))
-            self.assertEqual(res["mode"], "fix_bugs")
-            self.assertIn("a - b", open(os.path.join(d, "task", "src/sum.py")).read())
-            self.assertIn("a + b", res["reference_diff"])
-            self.assertEqual(res["mutations"][0]["kind"], "bug")
-            self.assertIsNone(res["extension"])
-            self.assertTrue(any(c["id"] == "AC_FIX" for c in res["acceptance_criteria"]))
+            # descriptive task_mode, not an enum
+            self.assertEqual(res["task_mode"], "design+fix+extend (senior)")
+            # example test shipped under task/
+            self.assertTrue(os.path.isfile(os.path.join(task, "tests", "example_test.py")))
+            # team test stripped from task/
+            self.assertFalse(os.path.isfile(os.path.join(task, "tests", "test_team.py")))
+            # hidden suite is a SIBLING, tiered, and absent from task/
+            hidden = res["hidden_tests_dir"]
+            self.assertTrue(os.path.isfile(os.path.join(hidden, "core", "test_core.py")))
+            self.assertTrue(os.path.isfile(os.path.join(hidden, "stretch", "test_scale.py")))
+            self.assertFalse(hidden.startswith(os.path.abspath(task) + os.sep))
+            self.assertEqual(res["hidden_tiers"]["core"], ["test_core.py"])
+            self.assertEqual(res["human_rubric"][0]["dimension"], "model choice")
+            # reference exemplar restores the gutted region
+            self.assertIn("not e['deleted']", res["reference_exemplar"])
 
+    def test_stub_exemplar_restores_correct(self):
+        with tempfile.TemporaryDirectory() as d:
+            correct = _correct(d)
+            res = taskify.taskify(correct, {"mutations": [_STUB]}, os.path.join(d, "task"))
+            self.assertTrue(res["ok"], res.get("error"))
+            # the exemplar diff (task -> correct) carries the real solution body
+            self.assertIn("return [e for e in entries if not e['deleted']]", res["reference_exemplar"])
+            self.assertIn("NotImplementedError", res["reference_exemplar"])  # the stub it replaces
+
+    def test_descriptive_mode_derived_when_absent(self):
+        with tempfile.TemporaryDirectory() as d:
+            correct = _correct(d)
+            res = taskify.taskify(correct, {"mutations": [_STUB], "extension": {"description": "x"}},
+                                  os.path.join(d, "task"))
+            self.assertTrue(res["ok"], res.get("error"))
+            self.assertIn("build", res["task_mode"])
+            self.assertIn("extend", res["task_mode"])
+
+
+class Guards(unittest.TestCase):
     def test_missing_find_fails(self):
         with tempfile.TemporaryDirectory() as d:
             correct = _correct(d)
-            res = taskify.taskify(correct, {"mutations": [{"file": "src/sum.py", "find": "ZZZ", "replace": "x"}]},
+            res = taskify.taskify(correct, {"mutations": [{"file": "src/history.py", "find": "ZZZ", "replace": "x"}]},
                                   os.path.join(d, "task"))
             self.assertFalse(res["ok"])
             self.assertIn("not present", res["error"])
 
-
-class FixAndExtend(unittest.TestCase):
-    def test_default_combined_task(self):
+    def test_hidden_under_task_refused(self):
         with tempfile.TemporaryDirectory() as d:
             correct = _correct(d)
-            res = taskify.taskify(correct, {"mutations": [_BUG], "extension": _EXT}, os.path.join(d, "task"))
-            self.assertTrue(res["ok"], res.get("error"))
-            self.assertEqual(res["mode"], "fix_and_extend")
-            self.assertIn("a + b", res["reference_diff"])          # the fix
-            self.assertEqual(res["extension"]["description"], _EXT["description"])
-            ids = [c["id"] for c in res["acceptance_criteria"]]
-            self.assertIn("AC_FIX", ids)       # the bug-fix criterion
-            self.assertIn("AC_EXT1", ids)      # the extension criterion
+            # a hidden path that tries to escape into task/ via traversal
+            plan = {"mutations": [_BUG], "hidden_tests": {"core": [{"path": "../task/sneaky.py", "content": "x"}]}}
+            res = taskify.taskify(correct, plan, os.path.join(d, "task"))
+            self.assertFalse(res["ok"])
+            self.assertIn("task/", res["error"])
 
-
-class ExtendOnly(unittest.TestCase):
-    def test_extension_only(self):
-        with tempfile.TemporaryDirectory() as d:
-            correct = _correct(d)
-            res = taskify.taskify(correct, {"extension": _EXT}, os.path.join(d, "task"))
-            self.assertTrue(res["ok"], res.get("error"))
-            self.assertEqual(res["mode"], "extend")
-            self.assertIsNone(res["reference_diff"])
-            self.assertEqual(res["mutations"], [])
-            self.assertEqual(open(os.path.join(d, "task", "src/sum.py")).read(),
-                             open(os.path.join(correct, "src/sum.py")).read())
-            self.assertIn("AC_EXT1", [c["id"] for c in res["acceptance_criteria"]])
-
-
-class NothingToDo(unittest.TestCase):
-    def test_empty_plan_fails(self):
+    def test_nothing_to_do_fails(self):
         with tempfile.TemporaryDirectory() as d:
             correct = _correct(d)
             res = taskify.taskify(correct, {"what_to_test": []}, os.path.join(d, "task"))
             self.assertFalse(res["ok"])
-            self.assertIn("nothing to do", res["error"])
+            self.assertIn("produces nothing", res["error"])
 
 
-class DiffExcludesVendored(unittest.TestCase):
-    def test_vendored_paths_excluded_from_reference_diff(self):
+class Exemplar(unittest.TestCase):
+    def test_exemplar_only_covers_mutated_files_not_vendored(self):
         with tempfile.TemporaryDirectory() as d:
             correct = _correct(d)
             os.makedirs(os.path.join(correct, "node_modules", "p"))
@@ -91,7 +118,8 @@ class DiffExcludesVendored(unittest.TestCase):
             res = taskify.taskify(correct, {"mutations": [_BUG], "vendored_paths": ["node_modules"]},
                                   os.path.join(d, "task"))
             self.assertTrue(res["ok"], res.get("error"))
-            self.assertNotIn("node_modules", res["reference_diff"])
+            self.assertNotIn("node_modules", res["reference_exemplar"])
+            self.assertIn("src/history.py", res["reference_exemplar"])
 
 
 if __name__ == "__main__":
