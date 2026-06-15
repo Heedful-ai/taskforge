@@ -15,3 +15,7 @@ source_context.json
 
 # OS
 .DS_Store
+
+# secrets
+.env
+.env.local

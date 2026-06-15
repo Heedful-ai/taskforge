@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """scrub.py — fail-closed safety gates, run before anything ships.
 
-Two gates, ported from jelly's by-hand task prep:
+Two gates, ported from heedful's by-hand task prep:
   1. Domain refusal — auth / crypto / payment tasks are out of scope. Checked over file paths AND
      free text (brief, issue body).
   2. Secret / PII scan — a built-in regex scan (always on), augmented by `gitleaks` when present.
@@ -31,7 +31,7 @@ from dataclasses import asdict, dataclass
 # Suppress obvious fakes ONLY when the marker is in the matched value itself (never line-level —
 # a line mentioning "test" must not hide a real key sitting on it).
 PLACEHOLDER_IN_MATCH = re.compile(r"(example|changeme|placeholder|your[-_]?key|x{3,}|redacted|dummy|sample|fake)", re.I)
-PLACEHOLDER_EMAIL_DOMAINS = re.compile(r"@(example\.(com|org|net)|test\.com|localhost|jelly\.local|email\.com)\b", re.I)
+PLACEHOLDER_EMAIL_DOMAINS = re.compile(r"@(example\.(com|org|net)|test\.com|localhost|heedful\.local|email\.com)\b", re.I)
 
 # (kind, rule, compiled regex)
 RULES: list[tuple[str, str, "re.Pattern[str]"]] = [

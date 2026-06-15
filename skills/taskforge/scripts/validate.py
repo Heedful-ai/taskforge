@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """validate.py — prove the task runs standalone and offline. The gate.
 
-Runs inside a container with `--network=none`, mirroring jelly's egress-locked sandbox (a stdlib
+Runs inside a container with `--network=none`, mirroring heedful's egress-locked sandbox (a stdlib
 script can't sever egress on macOS). No container runtime → FAIL CLOSED (no bundle).
 
 Checks (no hidden tests — there's nothing hidden):

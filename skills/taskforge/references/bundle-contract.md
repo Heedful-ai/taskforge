@@ -1,7 +1,7 @@
 # task-bundle.zip — what's in it
 
 The deliverable. Simple and dual-use: hand a candidate `task/` and grade by hand with `EVALUATION.md`,
-or send the whole bundle to jelly for automated grading.
+or send the whole bundle to heedful for automated grading.
 
 ```
 task-bundle.zip
@@ -20,7 +20,7 @@ task-bundle.zip
 ```
 
 What it deliberately does **not** contain: no `node_modules`/vendored deps (the lockfile is enough;
-jelly installs at ingest, a human runs `npm install`), no hidden tests, no scorecard blob, no manifest,
+heedful installs at ingest, a human runs `npm install`), no hidden tests, no scorecard blob, no manifest,
 no checksums.
 
 ## context.json (app metadata)

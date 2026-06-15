@@ -112,7 +112,7 @@ Grading uses the **answer key** the skill produces (`EVALUATION.md` + `evaluatio
   `evaluation/reference/` is **one** acceptable approach, never a target.
 - **Author a clear rubric** (`human_rubric`: the design dimensions, the acceptable approaches, what good
   looks like) and **NOTES expectations** (`notes_evaluation`). That's what a human grader reads and what
-  jelly's eval agent is fed — the skill just generates it; it doesn't run grading.
+  heedful's eval agent is fed — the skill just generates it; it doesn't run grading.
 - The task is deliberately **bigger than finishable** (§2), so don't grade "did everything get done" —
   grade the core result + how far they got + the design reasoning in `NOTES.md`.
 

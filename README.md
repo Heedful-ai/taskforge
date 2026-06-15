@@ -26,10 +26,10 @@ Works in any agent that supports the [Agent Skills](https://agentskills.io) stan
 
 ```bash
 # Universal (Claude Code, Codex, Cursor, …) — no global install
-npx openskills install <org>/taskforge
+npx openskills install Heedful-ai/taskforge
 
 # or manual: copy the skill into your agent's skills dir
-git clone https://github.com/<org>/taskforge
+git clone https://github.com/Heedful-ai/taskforge
 cp -r taskforge/skills/taskforge ~/.claude/skills/      # Claude Code
 cp -r taskforge/skills/taskforge ~/.agents/skills/      # Codex & others
 ```
@@ -53,7 +53,7 @@ task-bundle.zip
 ```
 
 Hand the candidate `task/` and grade with `EVALUATION.md`, or send the whole bundle to a platform for
-automated grading. See [docs/jelly-handoff.md](docs/jelly-handoff.md) for the automated-ingest contract.
+automated grading. See [docs/heedful-handoff.md](docs/heedful-handoff.md) for the automated-ingest contract.
 
 ## Development
 

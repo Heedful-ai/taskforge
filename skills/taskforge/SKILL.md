@@ -25,7 +25,7 @@ design the *task* — grounded in `references/task-design.md`, not a fixed formu
 
 > **What you produce.** A self-contained take-home in `task/`, a grading guide (`EVALUATION.md` +
 > `evaluation/reference/`), and app metadata (`context.json`). It's **dual-use**: the user can hand the
-> candidate `task/` and grade by hand with `EVALUATION.md`, **or** send the whole bundle to **jelly**
+> candidate `task/` and grade by hand with `EVALUATION.md`, **or** send the whole bundle to **heedful**
 > for automated grading. Your job is just to generate a good task + a clear grading guide. Don't
 > editorialize about grading, don't emit a "how to grade" walkthrough, don't generate a grading script
 > — producing the bundle is the whole job.
@@ -161,7 +161,7 @@ context.json             app metadata (who, which PR, discussion summary, role)
 ```
 **Hand off.** Tell the user where `task-bundle.zip` is, one line on what's inside (above), and that it's
 dual-use: hand the candidate `task/` and grade with `EVALUATION.md` + `evaluation/`, or send the whole
-bundle to jelly for automated grading. Then stop — don't emit a grading walkthrough.
+bundle to heedful for automated grading. Then stop — don't emit a grading walkthrough.
 
 ---
 

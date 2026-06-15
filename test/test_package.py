@@ -82,7 +82,7 @@ class Context(unittest.TestCase):
         self.assertNotIn("reference_exemplar", ctx)
 
     def test_context_carries_rubric_and_install_command(self):
-        # U12: jelly reads the rubric structurally + the install is fully bundle-driven (KTD3).
+        # U12: heedful reads the rubric structurally + the install is fully bundle-driven (KTD3).
         ctx = package.build_context(_taskify(), SOURCE, _meta())
         self.assertEqual(ctx["rubric"][0]["dimension"], "model choice")
         self.assertEqual(ctx["rubric"][0]["acceptable_approaches"], ["append-only", "snapshots"])
