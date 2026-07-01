@@ -1,64 +1,75 @@
 # taskforge
 
 An installable **AI Agent Skill** that turns one of your real merged GitHub PRs into a
-bounded, self-contained **candidate coding task** — problem-first, so a senior candidate must
-design and justify a solution, not transcribe one — plus a grading guide for whoever
-evaluates the result.
+bounded, self-contained **candidate coding task** — problem-first, so candidates must design
+and justify a solution, not transcribe one — plus a human- and AI-readable grading guide.
 
-You run it inside your own coding agent (Claude Code, Codex, …). Working with you, it:
+You run it inside Claude Code (or any agent that supports the [Agent Skills](https://agentskills.io)
+standard). Working with you, it:
 
-1. interviews you about the role and what you want to test,
-2. scores a real merged PR's task-suitability and pulls it with the `gh` CLI,
-3. carves the relevant code into a standalone, runnable project,
-4. proves that project builds + tests **offline**,
-5. turns it into a **problem the candidate must design and solve** — it presents the problem +
-   worked scenarios (never the solution) and asks for a `NOTES.md` explaining their approach and
-   where the AI was wrong,
-6. writes a candidate-facing `BRIEF.md` and a grading guide (`EVALUATION.md`),
-7. packages a `task-bundle.zip` — hand the candidate `task/` and grade by hand, or send it to a
-   platform for automated grading.
+1. scores a real merged PR's task-suitability and pulls it with the `gh` CLI,
+2. carves the relevant code into a standalone, runnable project,
+3. proves it builds + tests **offline**,
+4. turns it into a **problem** — presents the situation and worked scenarios, never the solution,
+   and asks the candidate to write a `NOTES.md` explaining their approach and where the AI was wrong,
+5. writes a candidate-facing `BRIEF.md` and a grading guide (`EVALUATION.md` with explicit rubric),
+6. packages a `task-bundle.zip`.
 
-It is **fail-closed**: it refuses auth/crypto/payment tasks and never ships a detected secret.
+Fail-closed: refuses auth/crypto/payment tasks and never ships a detected secret.
 
 ## Install (≈1 minute)
 
-Works in any agent that supports the [Agent Skills](https://agentskills.io) standard.
-
 ```bash
-# Universal (Claude Code, Codex, Cursor, …) — no global install
+# Claude Code
 npx openskills install Heedful-ai/taskforge
 
-# or manual: copy the skill into your agent's skills dir
+# or manual
 git clone https://github.com/Heedful-ai/taskforge
-cp -r taskforge/skills/taskforge ~/.claude/skills/      # Claude Code
-cp -r taskforge/skills/taskforge ~/.agents/skills/      # Codex & others
+cp -r taskforge/skills/taskforge ~/.claude/skills/
 ```
 
-Then ask your agent: **"build a candidate coding task from PR <url>"**.
+Then ask your agent: **"build a candidate coding task from PR &lt;url&gt;"**.
 
 ## Requirements
 
-`git`, `gh` (authenticated), `python3` (3.9+), `zip`, and a container runtime (`docker` or
-`podman`) for the offline build/test check. The skill checks these first and tells you what's
-missing.
+`git`, `gh` (authenticated), `python3` (3.9+), `zip`, and `docker` or `podman` for the offline
+build/test check. The skill checks these and tells you what's missing.
 
 ## What you get
 
 ```
 task-bundle.zip
-├── task/                  # the candidate exercise + BRIEF.md (this is what they receive)
-├── EVALUATION.md          # grading guide — readable by a human or an eval agent
-├── evaluation/reference/  # the team's solution (one acceptable approach)
-└── context.json           # metadata: who made it, source PR, role, run commands
+├── task/                  the candidate exercise — this is what you send them
+│   ├── BRIEF.md           problem statement (no solution hints)
+│   └── <source files>     runnable project with lockfile; deps install from the lockfile
+├── EVALUATION.md          grading guide — rubric dimensions, what good looks like, NOTES expectations
+├── evaluation/reference/  the team's original solution (one acceptable approach, not the target)
+└── context.json           metadata: source PR, role/seniority, run commands, machine-readable rubric
 ```
 
-Hand the candidate `task/` and grade with `EVALUATION.md`, or send the whole bundle to a platform for
-automated grading. See [docs/heedful-handoff.md](docs/heedful-handoff.md) for the automated-ingest contract.
+Hand the candidate `task/` and grade with `EVALUATION.md` by hand. Or use
+**[heedful.ai](https://heedful.ai)** to run it properly.
+
+## Going further with heedful.ai
+
+Upload the `task-bundle.zip` to [heedful.ai](https://heedful.ai) and you get:
+
+- **Send a link** — candidates get a VS Code environment in the browser with your task pre-loaded,
+  a Claude budget to work with, and a time limit. No setup on their end.
+- **Recording + timeline** — every action is captured. You see a structured timeline of what they
+  did, not just the final result.
+- **AI collaboration grade** — evaluates *how* they used AI: did they understand what it produced,
+  catch its mistakes, drive it with intent? Graded across four dimensions with evidence from the
+  session.
+- **Solution comparison** — candidate's result is automatically compared to the `evaluation/reference/`
+  solution from the bundle, so you see exactly where they landed relative to the team's approach.
+
+The task bundle is the portable unit — generate it once, use it however you want.
 
 ## Development
 
-Scripts are Python 3 (standard library only). Run the test suite — including a real
-`--network=none` container check when Docker is available — with:
+Scripts are Python 3 (standard library only). Run the tests — including a real `--network=none`
+container check when Docker is available:
 
 ```bash
 python3 -m unittest discover -s test
