@@ -52,7 +52,7 @@ def build_context(taskify: dict, source: dict, meta: dict) -> dict:
             "skills_assessed": asmt.get("skills_assessed", []),
         },
         "hiring": meta.get("hiring") or {},
-        "pr_suitability": meta.get("pr_suitability") or {"verdict": "", "reasons": []},
+        "pr_suitability": meta.get("pr_suitability") or {},
         # Machine-readable rubric so heedful's eval reads it structurally instead of parsing
         # EVALUATION.md prose. Same shape EVALUATION.md renders from (taskify.human_rubric).
         "rubric": taskify.get("human_rubric") or [],
@@ -165,6 +165,11 @@ def redact_context_pii(context: dict) -> int:
         out, n = scrub.redact_pii(s or "")
         total += n
         return out
+
+    # Null out operator email — gh_login + operator name are enough attribution.
+    cb = context.get("created_by")
+    if isinstance(cb, dict) and cb.get("email"):
+        cb["email"] = None
 
     if "summary" in context:
         context["summary"] = red(context.get("summary"))
