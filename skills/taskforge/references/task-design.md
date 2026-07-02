@@ -151,18 +151,18 @@ grounded in §1–§6 — there is no controlling mode.
 
 ---
 
-## Worked example — `superlistapp/anchor` PR #5
+## Worked example — a PR that added entry versioning
 
-The PR added **append-only entry versioning** (view a brief at any past version, recover deleted
-entries, keep a fast current view) on top of a mutable `entries` table.
+The PR added **append-only entry versioning** (view a record at any past version, recover deleted
+entries, keep a fast current view) on top of a mutable `records` table.
 
 - **BAD task:** *"implement an append-only log with these 6 rules."* → transcription, mid signal. We
   handed over the solution.
-- **GOOD task:** *"Brief entries are stored in a mutable table — rows get UPDATEd and DELETEd in place,
-  so history is lost. We need: (a) view the brief as it was at any past version, (b) recover an entry
+- **GOOD task:** *"Records are stored in a mutable table — rows get UPDATEd and DELETEd in place,
+  so history is lost. We need: (a) view a record as it was at any past version, (b) recover a record
   that was deleted, (c) keep a fast 'current' view. Here are 4 scenarios of edits with their expected
   current + historical views. Design and implement a model that supports this; then handle two
-  concurrent edits to the same entry. In NOTES.md, explain your approach and the alternatives you
+  concurrent edits to the same record. In NOTES.md, explain your approach and the alternatives you
   considered and rejected."* → the candidate chooses append-only log vs snapshots vs temporal table vs
   audit trail and justifies it. **Senior signal.** Since they design it, we ship **no tests** for it —
   we grade the result against the scenarios + the rubric + their NOTES, with the team's append-only
