@@ -4,8 +4,7 @@ An installable **AI Agent Skill** that turns one of your real merged GitHub PRs 
 bounded, self-contained **candidate coding task** — problem-first, so candidates must design
 and justify a solution, not transcribe one — plus a human- and AI-readable grading guide.
 
-You run it inside Claude Code (or any agent that supports the [Agent Skills](https://agentskills.io)
-standard). Working with you, it:
+You run it inside Claude Code. Working with you, it:
 
 1. scores a real merged PR's task-suitability and pulls it with the `gh` CLI,
 2. carves the relevant code into a standalone, runnable project,
@@ -19,13 +18,11 @@ Fail-closed: refuses auth/crypto/payment tasks and never ships a detected secret
 
 ## Install (≈1 minute)
 
-```bash
-# Claude Code
-npx openskills install Heedful-ai/taskforge
+In Claude Code:
 
-# or manual
-git clone https://github.com/Heedful-ai/taskforge
-cp -r taskforge/skills/taskforge ~/.claude/skills/
+```
+/plugin marketplace add Heedful-ai/taskforge
+/plugin install taskforge
 ```
 
 Then ask your agent: **"build a candidate coding task from PR &lt;url&gt;"**.
