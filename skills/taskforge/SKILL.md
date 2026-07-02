@@ -11,8 +11,7 @@ license: MIT
 compatibility: Requires git, gh (authenticated), python3 (>=3.9), zip, and a container runtime (docker or podman).
 metadata:
   version: "0.3.0"
-  spec: agentskills.io
-  homepage: https://github.com/taskforge/taskforge
+  homepage: https://github.com/Heedful-ai/taskforge
 ---
 
 # taskforge — build a candidate coding task from a real PR

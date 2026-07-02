@@ -1,0 +1,28 @@
+{
+  "name": "taskforge",
+  "owner": {
+    "name": "Heedful"
+  },
+  "metadata": {
+    "description": "Plugin marketplace for Taskforge — turn real PRs into candidate coding tasks",
+    "version": "0.3.0"
+  },
+  "plugins": [
+    {
+      "name": "taskforge",
+      "description": "Turn a real GitHub PR into a bounded candidate coding take-home + grading guide. Collaborative and fail-closed: scores the PR, carves a standalone runnable project, and packages task-bundle.zip.",
+      "author": {
+        "name": "Heedful"
+      },
+      "homepage": "https://github.com/Heedful-ai/taskforge",
+      "tags": [
+        "hiring",
+        "take-home",
+        "technical-interview",
+        "candidate-evaluation",
+        "ai-powered"
+      ],
+      "source": "./"
+    }
+  ]
+}

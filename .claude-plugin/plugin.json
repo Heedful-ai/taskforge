@@ -1,0 +1,18 @@
+{
+  "name": "taskforge",
+  "version": "0.3.0",
+  "description": "Turn a real GitHub PR into a candidate coding take-home + grading guide",
+  "author": {
+    "name": "Heedful"
+  },
+  "homepage": "https://github.com/Heedful-ai/taskforge",
+  "repository": "https://github.com/Heedful-ai/taskforge",
+  "license": "MIT",
+  "keywords": [
+    "hiring",
+    "take-home",
+    "technical-interview",
+    "code-review",
+    "candidate-evaluation"
+  ]
+}

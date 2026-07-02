@@ -1,0 +1,6 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "taskforge",
+  "version": "0.3.0",
+  "description": "Turn a real GitHub PR into a candidate coding take-home + grading guide"
+}
