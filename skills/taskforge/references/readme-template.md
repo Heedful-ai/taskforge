@@ -55,6 +55,20 @@ Using an AI assistant is expected and fine — we want your judgment about it.
   doesn't).>
 - <build/run step if any: `<build_command>`>
 
+<!-- FRONTEND TASKS ONLY: when the bundle declares `dev_command`, the run instruction below is
+     rendered FROM that field — never write a different command here (the field and what the
+     candidate is told must not drift). Include all four notes; the first two save candidates
+     from wrongly concluding the environment is broken. -->
+- Start the dev server: `<dev_command, e.g. npm run dev>`, then click **Open preview** in the
+  status bar (or use the Ports view) to open the app in a browser tab.
+- The **first page load can take a couple of minutes** while the dev server compiles — that's
+  normal, not a broken environment. Later loads and hot reload are fast.
+- The app is served **under a proxy path** on port `<preview_port>` (you'll see something like
+  `/absproxy/<preview_port>/` in the URL) — that's expected; the project is pre-configured for it
+  and you don't need to change any config.
+- You may see a few 404s from the dev overlay in the browser console — a known cosmetic Next.js
+  issue behind a path prefix. Harmless; ignore them.
+
 ## What we're looking for
 <1–2 lines on judgment, prioritization, clean code that fits the constraints, and clear reasoning in
 NOTES.md. Do NOT reveal the design or the bug's location.>

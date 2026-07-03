@@ -143,6 +143,8 @@ its failing test.
 Assemble `meta.json` (derive `created_by.operator` from `git config user.name` / `gh api user` — don't
 ask the user):
 - `task_id`, `language`, `build_command`, `test_command`;
+- **frontend tasks only:** `dev_command` + `preview_port` (both, or neither — see
+  `references/bundle-contract.md`; the BRIEF's run instruction must be rendered from `dev_command`);
 - `summary` (a line on what you and the user decided), `hiring` `{position, seniority, job_description,
   time_target_hours}`, `assessment` `{problem_summary, test_focus, skills_assessed}`,
   `pr_suitability` `{verdict, reasons}`;
@@ -150,6 +152,11 @@ ask the user):
 Then run `python3 scripts/package.py --task task --correct correct --taskify taskify_result.json
 --source source_context.json --meta meta.json --out task-bundle.zip`. It builds the bundle, scrubs the
 prose (fail-closed on secrets), and excludes `node_modules`/vendored deps.
+
+Finally run `python3 scripts/validate_bundle.py task-bundle.zip` — the coherence gate. Backend
+bundles pass untouched; a frontend bundle is rejected unless `dev_command`/`preview_port` come
+together, `test_command` is runnable, and the baked `basePath` in `task/next.config.*` is exactly
+`/absproxy/<preview_port>`. A rejection means a broken preview for the candidate — fix, re-package.
 
 The bundle is:
 ```

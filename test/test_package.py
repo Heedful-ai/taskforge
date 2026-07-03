@@ -92,6 +92,18 @@ class Context(unittest.TestCase):
         ctx = package.build_context(_taskify(), SOURCE, _meta(install_command="pnpm i --frozen-lockfile"))
         self.assertEqual(ctx["install_command"], "pnpm i --frozen-lockfile")
 
+    def test_frontend_fields_pass_through(self):
+        # U4 frontend tasks (KTD3): dev_command + preview_port ride context.json to heedful.
+        ctx = package.build_context(_taskify(), SOURCE, _meta(dev_command="npm run dev", preview_port=3000))
+        self.assertEqual(ctx["dev_command"], "npm run dev")
+        self.assertEqual(ctx["preview_port"], 3000)
+
+    def test_backend_context_carries_no_frontend_fields(self):
+        # absent ⇒ backend task: the keys must not appear at all (field-less bundles stay field-less)
+        ctx = package.build_context(_taskify(), SOURCE, _meta())
+        self.assertNotIn("dev_command", ctx)
+        self.assertNotIn("preview_port", ctx)
+
 
 class Evaluation(unittest.TestCase):
     def test_evaluation_md_content(self):

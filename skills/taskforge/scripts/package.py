@@ -40,7 +40,7 @@ DEFAULT_INSTALL = {"node": "npm ci", "python": "pip install -r requirements.txt"
 def build_context(taskify: dict, source: dict, meta: dict) -> dict:
     asmt = meta.get("assessment") or {}
     language = meta.get("language", "")
-    return {
+    context = {
         "task_id": meta.get("task_id", ""),
         "created_at": meta.get("created_at", ""),
         "created_by": meta.get("created_by", {}),
@@ -64,6 +64,14 @@ def build_context(taskify: dict, source: dict, meta: dict) -> dict:
         "skill_version": meta.get("skill_version", ""),
         "spec_version": meta.get("spec_version", ""),
     }
+    # Frontend declaration (optional): dev_command + preview_port make it a frontend task —
+    # heedful serves the dev server through its preview proxy. Absent ⇒ backend task, and the
+    # keys must not appear at all (field-less bundles stay field-less). validate_bundle.py
+    # enforces coherence (both fields together, basePath/port agreement).
+    if meta.get("dev_command") is not None or meta.get("preview_port") is not None:
+        context["dev_command"] = meta.get("dev_command")
+        context["preview_port"] = meta.get("preview_port")
+    return context
 
 
 def build_evaluation_md(taskify: dict, source: dict, meta: dict) -> str:
