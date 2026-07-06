@@ -57,8 +57,11 @@ Using an AI assistant is expected and fine — we want your judgment about it.
 
 <!-- FRONTEND TASKS ONLY: when the bundle declares `dev_command`, the run instruction below is
      rendered FROM that field — never write a different command here (the field and what the
-     candidate is told must not drift). Include all four notes; the first two save candidates
+     candidate is told must not drift). Include ALL FIVE notes; the first three save candidates
      from wrongly concluding the environment is broken. -->
+- Install dependencies first: `<install command, e.g. npm install>` — they are **not
+  preinstalled** in the workspace, so the dev server won't start until you do (`next: not
+  found` and the like just means you skipped this step).
 - Start the dev server: `<dev_command, e.g. npm run dev>`, then click **Open preview** in the
   status bar (or use the Ports view) to open the app in a browser tab.
 - The **first page load can take a couple of minutes** while the dev server compiles — that's
