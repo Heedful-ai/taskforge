@@ -35,17 +35,12 @@ class HappyPath(unittest.TestCase):
 
 
 class Refuse(unittest.TestCase):
-    def test_auth_domain_hard_refused(self):
+    # Domain-based refusal (auth/crypto/payment keyword blocklist) was DELETED 2026-07-07 — a guard
+    # for nothing: topics aren't hazards, and the secret/PII scan still hard-fails real leaks.
+    def test_auth_domain_is_fine(self):
         files = [_f("src/auth/login.ts"), _f("src/session.ts")]
         r = score_pr.score(files)
-        self.assertTrue(r["hard_refuse"])
-        self.assertTrue(r["signals"]["refused_domain"])
-        self.assertTrue(any("auth" in x for x in r["reasons"]))
-
-    def test_auth_in_text_hard_refused(self):
-        files = [_f("src/widget.ts")]
-        r = score_pr.score(files, pr_text="This PR reworks our OAuth password reset flow.")
-        self.assertTrue(r["hard_refuse"])
+        self.assertFalse(r["hard_refuse"])
 
     def test_config_only_no_carvable_source(self):
         files = [_f("package.json"), _f("package-lock.json"), _f("tsconfig.json")]

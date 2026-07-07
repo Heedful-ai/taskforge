@@ -62,8 +62,8 @@ The user gives **one thing: a GitHub PR.**
   `gh pr list --state merged` / `gh search prs`.
 - **Score suitability before proposing.** For each candidate, `gh pr view <n> --json
   files,additions,deletions > /tmp/pr.json` and run `python3 scripts/score_pr.py /tmp/pr.json --json`.
-  **Drop any `hard_refuse` PR** (refused domain, no carvable source, pure config/rename) with a
-  plain-language reason. Apply the rubric in `references/pr-suitability.md` to the survivors.
+  **Drop any `hard_refuse` PR** (no carvable source, pure config/rename) with a plain-language
+  reason. Apply the rubric in `references/pr-suitability.md` to the survivors.
 - **Present 2–4 suitable PRs as proposals**, each with a one-line reason it makes a good task (grounded
   in the suitability signals/rubric, not a hunch). **STOP and let the user pick one.**
 
@@ -107,7 +107,7 @@ not green, the slice isn't self-contained — loop with the user. Exit 5 = no ru
 
 ## Phase 4b — Scrub (fail-closed)
 Save the fetched issue text to a file, then run `python3 scripts/scrub.py correct --text
-issue=<issue.txt>`. **Any finding (exit 2 secret / exit 3 refused domain) → STOP, produce nothing.**
+issue=<issue.txt>`. **Any secret/PII finding (exit 2) → STOP, produce nothing.**
 See `references/safety.md`.
 
 ## Phase 5 — Taskify — design the spec

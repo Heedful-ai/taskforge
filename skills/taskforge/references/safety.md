@@ -5,12 +5,8 @@ Never work around a finding to "make the bundle go through" — a blocked task m
 
 Run the gates by executing `scripts/scrub.py`; do not eyeball the code yourself.
 
-## Gate 1 — domain refusal
-Auth / crypto / payment tasks are out of scope (too sensitive to hand a candidate). `scrub.py`
-checks both the carved file **paths** and the free **text** (the brief, the fetched issue/PR body).
-A match → refuse. Exit code `3`.
 
-## Gate 2 — secrets / PII
+## The gate — secrets / PII
 A built-in regex scan (AWS / GitHub / Slack / Anthropic / OpenAI / Google keys, private keys, JWTs,
 assigned `secret = "…"`, emails) runs always; `gitleaks` augments it when installed. Obvious
 placeholders (`your-key`, `example.com`) are suppressed only when the marker is in the matched value
@@ -26,7 +22,7 @@ Binaries inside dependency dirs are ignored; a binary sitting in the candidate *
 as a warning (`warnings[]`) so it's never silently shipped — review it before continuing.
 
 ## Two classes of safety
-- **Safe by construction** (script-gated): secrets, PII, refused domains. The scripts enforce these.
+- **Safe by construction** (script-gated): secrets, PII. The scripts enforce these.
 - **Safe by approval** (human gate): which proprietary code leaves, and whether the brief leaks the
   solution. The scripts cannot judge these — the carve and brief STOP gates explicitly ask the user
   to confirm nothing proprietary or spoilery is going out.

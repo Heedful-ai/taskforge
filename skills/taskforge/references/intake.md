@@ -7,11 +7,11 @@ topic, or what to test — read the PR and figure it out.
 Ask for a GitHub PR link or number. If they don't have one (or ask you to suggest):
 - find candidates: `gh pr list --state merged --limit 20`, and/or `gh search prs --merged`;
 - **score each before proposing.** `gh pr view <n> --json files,additions,deletions > /tmp/pr.json`
-  then `python3 scripts/score_pr.py /tmp/pr.json --json`. Drop any `hard_refuse` (refused domain, no
-  carvable source, pure config/rename). Apply `references/pr-suitability.md` to the survivors.
+  then `python3 scripts/score_pr.py /tmp/pr.json --json`. Drop any `hard_refuse` (no carvable
+  source, pure config/rename). Apply `references/pr-suitability.md` to the survivors.
 - **present 2–4 specific PRs as a short proposal list**, each with a one-line reason it'd make a good,
   self-contained task — grounded in the suitability signals + rubric (multi-approach design content,
-  carvable, real domain logic, gradeable, ~1–2h). Avoid giant/sprawling PRs and refused domains.
+  carvable, real domain logic, gradeable, ~1–2h). Avoid giant/sprawling PRs.
 
 **Then STOP and let the user choose.** This is a hard gate: do not design a task or ask about the role
 until they've picked one. Make proposals first — nothing else.

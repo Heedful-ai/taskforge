@@ -1,14 +1,13 @@
 # Is this PR a good task source? — the suitability rubric
 
-**Most merged PRs make terrible tasks** (trivial, sprawling, the hard part lived in a Slack thread, one-
-shottable, or a refused domain). Don't rely on cherry-picking. Score every candidate PR against this
-rubric **before** you carve, and **refuse or flag** the weak ones.
+**Most merged PRs make terrible tasks** (trivial, sprawling, the hard part lived in a Slack thread, or
+one-shottable). Don't rely on cherry-picking. Score every candidate PR against this rubric **before**
+you carve, and **refuse or flag** the weak ones.
 
 Two layers:
 
-1. **`scripts/score_pr.py`** (mechanical prefilter) — run it first. It returns `signals` + `hard_refuse`
-   + `reasons`. A `hard_refuse` (refused domain, no carvable source, pure rename/config bump) is an
-   automatic drop — don't propose it. Feed `signals` (file count, LOC, top-dir spread, test presence)
+1. **`scripts/score_pr.py`** (mechanical prefilter) — run it first. It returns `signals` +
+   `hard_refuse` (no carvable source, pure config/rename) → automatic drop — don't propose it. Feed `signals` (file count, LOC, top-dir spread, test presence)
    into your judgment below.
 2. **You (the agent)** — apply the rubric. This is the primary judgment; the script can't see design
    content or AI-resistance.
@@ -47,7 +46,6 @@ worth proposing.
 - **Scope ~1–2h after carving.** Estimate by *complexity*, not lines: a 300-line PR encoding a subtle
   invariant beats a 50-line mechanical transform. If the original author spent the time on the *design
   decision*, that's the signal.
-- **Safe.** Not auth / crypto / payment (`scrub` + `score_pr.py` refuse these), no obvious secret or IP
   exposure.
 
 ## Output

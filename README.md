@@ -14,7 +14,7 @@ You run it inside Claude Code. Working with you, it:
 5. writes a candidate-facing `BRIEF.md` and a grading guide (`EVALUATION.md` with explicit rubric),
 6. packages a `task-bundle.zip`.
 
-Fail-closed: refuses auth/crypto/payment tasks and never ships a detected secret.
+Fail-closed: never ships a detected secret.
 
 ## Install (≈1 minute)
 

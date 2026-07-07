@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-"""scrub.py — fail-closed safety gates, run before anything ships.
+"""scrub.py — fail-closed safety gate, run before anything ships.
 
-Two gates, ported from heedful's by-hand task prep:
-  1. Domain refusal — auth / crypto / payment tasks are out of scope. Checked over file paths AND
-     free text (brief, issue body).
-  2. Secret / PII scan — a built-in regex scan (always on), augmented by `gitleaks` when present.
+One gate, ported from heedful's by-hand task prep: the secret / PII scan — a built-in regex scan
+(always on), augmented by `gitleaks` when present.
 
 Every path content can reach a candidate bundle by must be scanned: the carved slice, the
 `gh`-fetched issue/PR text, and the assembled bundle prose (EVALUATION.md + context.json). So it scans both
@@ -13,7 +11,7 @@ no artifacts. Matches are redacted in output so findings can be logged safely.
 
 Stdlib only. Pure functions + a CLI. Usage:
   python3 scrub.py <dir> [--text name=FILE ...] [--brief FILE] [--json]
-Exit codes: 0 clean · 2 secret/PII finding · 3 refused domain · 4 usage error.
+Exit codes: 0 clean · 2 secret/PII finding · 4 usage error.
 """
 from __future__ import annotations
 
@@ -190,25 +188,6 @@ def gitleaks_scan(root: str) -> list[Finding]:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
-# --- domain refusal -----------------------------------------------------------------------
-
-REFUSED_DOMAINS: list[tuple[str, "re.Pattern[str]"]] = [
-    ("auth", re.compile(r"(?i)\b(auth|authn|authz|login|logout|signin|sign-in|oauth|session|password|credential|jwt|saml|sso)\b")),
-    ("crypto", re.compile(r"(?i)\b(crypto|encrypt|decrypt|cipher|aes|rsa|hmac|keypair|signing|signature|tls|x509)\b")),
-    ("payment", re.compile(r"(?i)\b(payment|billing|invoice|stripe|paypal|braintree|checkout|charge|card|pci|subscription)\b")),
-]
-
-
-def classify_refusal(paths: list[str], text: str = "") -> dict:
-    reasons: list[str] = []
-    for domain, rx in REFUSED_DOMAINS:
-        hit_path = next((p for p in paths if rx.search(p)), None)
-        if hit_path:
-            reasons.append(f'{domain}: matched in path "{hit_path}"')
-        elif text and rx.search(text):
-            reasons.append(f"{domain}: matched in text")
-    return {"refused": bool(reasons), "reasons": reasons}
-
 
 # --- CLI ----------------------------------------------------------------------------------
 
@@ -245,12 +224,9 @@ def main() -> int:
         except OSError:
             pass
 
-    refusal = classify_refusal(paths, brief_text)
-
     report = {
-        "ok": not findings and not refusal["refused"],
+        "ok": not findings,
         "findings": [asdict(f) for f in findings],
-        "refusal": refusal,
         "warnings": [f"unscanned binary in source: {b}" for b in skipped],
     }
     if "--json" in sys.argv[1:]:
@@ -260,13 +236,9 @@ def main() -> int:
             print(f"[{f.kind}] {f.rule} @ {f.where}:{f.line} — {f.match}")
         for w in report["warnings"]:
             print(f"[warn] {w}")
-        if refusal["refused"]:
-            print("REFUSED — " + "; ".join(refusal["reasons"]))
         if report["ok"]:
             print("clean")
 
-    if refusal["refused"]:
-        return 3
     if findings:
         return 2
     return 0

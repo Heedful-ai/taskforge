@@ -71,20 +71,6 @@ class ScanPaths(unittest.TestCase):
             self.assertTrue(all("node_modules" not in s for s in skipped))
 
 
-class Refusal(unittest.TestCase):
-    def test_refuses_by_path(self):
-        r = scrub.classify_refusal(["src/auth/login.py"], "")
-        self.assertTrue(r["refused"])
-        self.assertTrue(any("auth" in reason for reason in r["reasons"]))
-
-    def test_refuses_by_text_only(self):
-        r = scrub.classify_refusal(["src/handler.py"], "Refactor the Stripe payment checkout flow")
-        self.assertTrue(r["refused"])
-
-    def test_allows_unrelated(self):
-        r = scrub.classify_refusal(["src/parser.py"], "Fix the off-by-one in the tokenizer")
-        self.assertFalse(r["refused"])
-
 
 if __name__ == "__main__":
     unittest.main()

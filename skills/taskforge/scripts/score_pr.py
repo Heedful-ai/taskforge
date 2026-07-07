@@ -9,7 +9,7 @@ left to the agent.
 
 Input: the PR's changed files + (optionally) the unified diff and PR/issue text.
 Output: { ok, signals, hard_refuse, reasons }. `ok` is True unless input is malformed.
-`hard_refuse=True` only for mechanical disqualifiers: refused domain, no carvable source, or a
+`hard_refuse=True` only for mechanical disqualifiers: no carvable source, or a
 pure config/dependency/rename change with no real logic.
 
 Stdlib only. Pure functions + a CLI. Usage:
@@ -17,7 +17,7 @@ Stdlib only. Pure functions + a CLI. Usage:
 where pr.json is { "files": [{"path","additions","deletions"}], "diff": "<unified diff>",
                    "text": "<pr+issue prose>" }  (gh pr view --json files,additions,deletions shape).
 Exit codes: 0 ok (read signals) · 4 usage/parse error. (hard_refuse is in the report, not the exit
-code — refusal is a judgment surfaced to the agent, not a safety abort like scrub.)
+code — it's a judgment surfaced to the agent, not a safety abort like scrub.)
 """
 from __future__ import annotations
 
@@ -26,9 +26,6 @@ import os
 import re
 import sys
 
-# score_pr lives beside scrub.py; reuse its domain-refusal gate verbatim.
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import scrub  # noqa: E402
 
 # --- file classification ------------------------------------------------------------------
 
@@ -80,18 +77,14 @@ def score(files: list[dict], diff_text: str = "", pr_text: str = "") -> dict:
         _HUNK_ADD.search(diff_text) or _HUNK_DEL.search(diff_text)
     )
 
-    refusal = scrub.classify_refusal(paths, pr_text)
-
     reasons: list[str] = []
-    if refusal["refused"]:
-        reasons += refusal["reasons"]
     if counts["source"] == 0:
         which = "config/dependency" if counts["config"] else "docs/tests"
         reasons.append(f"no carvable source: PR changes only {which}, no domain logic to carve")
     if rename_only:
         reasons.append("pure rename/move: no behavioural content changed")
 
-    hard_refuse = bool(refusal["refused"] or counts["source"] == 0 or rename_only)
+    hard_refuse = bool(counts["source"] == 0 or rename_only)
 
     signals = {
         "file_count": len(paths),
@@ -101,7 +94,6 @@ def score(files: list[dict], diff_text: str = "", pr_text: str = "") -> dict:
         "kind_counts": counts,
         "has_tests": counts["test"] > 0,
         "spread_flag": len(top_dirs) > 4 or len(paths) > 25,  # advisory: likely too sprawling to carve whole
-        "refused_domain": refusal["refused"],
         "rename_only": rename_only,
     }
     return {"ok": True, "signals": signals, "hard_refuse": hard_refuse, "reasons": reasons}
